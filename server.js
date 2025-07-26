@@ -132,6 +132,7 @@ async function getNewsFromOpenAI(keywords) {
       'Content-Type': 'application/json',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     };
+    let apiUrl = config.openai.apiUrl; // 默认使用配置的URL
     
     if (config.openai.apiUrl.includes('poloai.top')) {
       // poloai.top 联网搜索格式
@@ -149,7 +150,7 @@ async function getNewsFromOpenAI(keywords) {
       headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
       
       // 使用联网搜索端点
-      let apiUrl = config.openai.apiUrl.replace('/v1/chat/completions', '/v1/responses');
+      apiUrl = config.openai.apiUrl.replace('/v1/chat/completions', '/v1/responses');
       console.log('   - 使用联网搜索端点:', apiUrl);
     } else {
       // 标准OpenAI格式
