@@ -235,25 +235,58 @@ async function getNewsFromOpenAI(keywords) {
 
     // 尝试解析JSON
     try {
+      // 首先尝试直接解析JSON
       const newsData = JSON.parse(content);
       return newsData.map(item => item.title);
     } catch (parseError) {
-      console.log('JSON解析失败，尝试其他方式提取新闻标题...');
-
-      // 如果JSON解析失败，尝试从HTML或文本中提取标题
-      if (content.includes('<') && content.includes('>')) {
-        // 如果是HTML格式，尝试提取文本内容
-        console.log('检测到HTML格式，尝试提取文本...');
-        const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-
-        // 尝试从文本中提取新闻标题
-        const lines = textContent.split(/[。！？\n]/).filter(line => line.trim().length > 5);
-        return lines.slice(0, 10); // 返回前10行作为新闻标题
-      } else {
-        // 如果是纯文本，按行分割
-        const lines = content.split(/[。！？\n]/).filter(line => line.trim().length > 5);
-        return lines.slice(0, 10);
+      console.log('直接JSON解析失败，尝试提取JSON格式内容...');
+      
+      // 尝试从文本中提取JSON格式的内容
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        try {
+          const jsonContent = jsonMatch[0];
+          const newsData = JSON.parse(jsonContent);
+          return newsData.map(item => item.title);
+        } catch (jsonError) {
+          console.log('JSON数组解析失败，尝试逐行提取...');
+        }
       }
+      
+      // 尝试从文本中提取新闻标题（处理包含格式标记的情况）
+      const lines = content.split('\n').filter(line => {
+        const trimmed = line.trim();
+        // 过滤掉格式标记、空行、标题行等
+        return trimmed.length > 5 && 
+               !trimmed.startsWith('以下是与') &&
+               !trimmed.startsWith('```') &&
+               !trimmed.startsWith('新闻标题') &&
+               !trimmed.startsWith('相关的最新') &&
+               trimmed.includes('title');
+      });
+      
+      const titles = [];
+      for (const line of lines) {
+        // 提取title字段的内容
+        const titleMatch = line.match(/"title":\s*"([^"]+)"/);
+        if (titleMatch && titleMatch[1]) {
+          titles.push(titleMatch[1]);
+        }
+      }
+      
+      if (titles.length > 0) {
+        return titles;
+      }
+      
+      // 最后的备选方案：按行分割并过滤
+      const fallbackLines = content.split(/[。！？\n]/).filter(line => {
+        const trimmed = line.trim();
+        return trimmed.length > 5 && 
+               !trimmed.startsWith('以下是与') &&
+               !trimmed.startsWith('```') &&
+               !trimmed.startsWith('新闻标题');
+      });
+      return fallbackLines.slice(0, 10);
     }
   } catch (error) {
     console.error('调用AI API失败:', error.message);
