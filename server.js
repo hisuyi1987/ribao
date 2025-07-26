@@ -168,7 +168,21 @@ async function getNewsFromOpenAI(keywords) {
     };
     let apiUrl = config.openai.apiUrl; // 默认使用配置的URL
     
-    if (config.openai.apiUrl.includes('poloai.top')) {
+    if (config.openai.apiUrl.includes('aihubmix.com')) {
+      // aihubmix.com format
+      requestData = {
+        model: config.openai.model,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 1000,
+        web_search_options: {} // 启用联网搜索
+      };
+      headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
+    } else if (config.openai.apiUrl.includes('poloai.top')) {
       // poloai.top format
       requestData = {
         model: config.openai.model,
