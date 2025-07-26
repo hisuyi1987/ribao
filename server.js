@@ -23,15 +23,34 @@ const defaultConfig = {
   openai: {
     apiUrl: 'https://aihubmix.com/v1/chat/completions',
     apiKey: '',
-    model: 'gemini-2.5-flash-search'
+    model: 'gpt-4o-mini'
   },
-  keywords: ['科技', '社会', '财经'],
+  keywords: ['科技', 'ai'],
+  useMockData: false,
   imageStyle: {
-    width: 800,
-    fontSize: 16,
+    width: 600,
+    height: 800,
+    // 主标题设置
+    mainTitle: '今日摸鱼见闻',
+    titleFontSize: 28,
     titleColor: '#333333',
+    titleY: 50, // 主标题Y坐标位置
+    
+    // 日期和关键词设置
+    dateY: 80, // 日期Y坐标位置
+    keywordsY: 110, // 关键词Y坐标位置
+    
+    // 正文设置
+    fontSize: 16,
     textColor: '#666666',
-    backgroundColor: '#ffffff'
+    textStartY: 190, // 正文起始Y坐标
+    lineHeight: 40, // 行高
+    textLeftPadding: 60, // 左侧内边距
+    
+    // 背景设置
+    backgroundColor: '#ffffff',
+    backgroundImage: '',
+    logoImage: ''
   }
 };
 
@@ -226,18 +245,7 @@ async function generateNewsImage(newsTitles) {
       console.log('Canvas版本:', require('canvas').version);
       
       // 从配置中获取图片样式
-      const imageStyle = config.imageStyle || {
-        width: 600,
-        height: 800,
-        titleFontSize: 28,
-        fontSize: 16,
-        titleColor: '#333333',
-        textColor: '#666666',
-        backgroundColor: '#ffffff',
-        mainTitle: '今日热点新闻',
-        backgroundImage: '',
-        logoImage: ''
-      };
+      const imageStyle = config.imageStyle || defaultConfig.imageStyle;
       
       // 创建Canvas
       const canvas = createCanvas(imageStyle.width, imageStyle.height);
@@ -268,21 +276,21 @@ async function generateNewsImage(newsTitles) {
       ctx.font = titleFont;
       ctx.fillStyle = imageStyle.titleColor;
       ctx.textAlign = 'center';
-      ctx.fillText(imageStyle.mainTitle, imageStyle.width / 2, 50);
+      ctx.fillText(imageStyle.mainTitle, imageStyle.width / 2, imageStyle.titleY);
       
       // 绘制日期
       const today = new Date();
       const dateStr = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
       ctx.font = `${imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", "DejaVu Sans", Arial, sans-serif`;
-      ctx.fillText(dateStr, imageStyle.width / 2, 80);
+      ctx.fillText(dateStr, imageStyle.width / 2, imageStyle.dateY);
       
       // 绘制关键词
-      ctx.fillText(`关键词: ${config.keywords.join('、')}`, imageStyle.width / 2, 110);
+      ctx.fillText(`关键词: ${config.keywords.join('、')}`, imageStyle.width / 2, imageStyle.keywordsY);
       
       // 绘制分隔线
       ctx.beginPath();
-      ctx.moveTo(50, 130);
-      ctx.lineTo(imageStyle.width - 50, 130);
+      ctx.moveTo(50, imageStyle.keywordsY + 20);
+      ctx.lineTo(imageStyle.width - 50, imageStyle.keywordsY + 20);
       ctx.strokeStyle = '#cccccc';
       ctx.stroke();
       
@@ -292,10 +300,10 @@ async function generateNewsImage(newsTitles) {
       ctx.textAlign = 'left';
       
       // 绘制新闻标题前的提示文字
-      ctx.fillText(`以下是与 "${config.keywords.join('、')}" 相关的新闻标题:`, 60, 160);
+      ctx.fillText(`以下是与 "${config.keywords.join('、')}" 相关的新闻标题:`, imageStyle.textLeftPadding, imageStyle.textStartY - imageStyle.lineHeight);
       
       // 逐条绘制新闻标题
-      let y = 190;
+      let y = imageStyle.textStartY;
       for (let i = 0; i < newsTitles.length && i < 10; i++) {
         let title = newsTitles[i];
         
@@ -320,8 +328,8 @@ async function generateNewsImage(newsTitles) {
         }
         
         // 绘制序号和标题
-        ctx.fillText(`${i + 1}. ${title}`, 60, y);
-        y += 40; // 行距
+        ctx.fillText(`${i + 1}. ${title}`, imageStyle.textLeftPadding, y);
+        y += imageStyle.lineHeight; // 行距
       }
       
       // 如果有Logo图片，加载并绘制
@@ -477,364 +485,445 @@ app.get('/api/news-image', async (req, res) => {
   }
 });
 
-// 后台配置页面
+// 修改管理页面HTML，添加更多排版设置
 app.get('/admin', (req, res) => {
-  const adminHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>新闻图片生成系统 - 后台配置</title>
-  <style>
-    body {
-      font-family: 'Microsoft YaHei', Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #1890ff;
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .section {
-      border: 1px solid #e8e8e8;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    .section-title {
-      font-size: 18px;
-      font-weight: bold;
-      color: #1890ff;
-      margin-bottom: 15px;
-      border-bottom: 2px solid #1890ff;
-      padding-bottom: 5px;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    .form-row {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 15px;
-    }
-    .form-col {
-      flex: 1;
-    }
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      color: #333;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    .color-picker {
-      width: 60px !important;
-      height: 40px;
-      padding: 0;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .save-btn {
-      background: #52c41a;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-right: 10px;
-    }
-    .test-btn {
-      background: #1890ff;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    .btn-group {
-      text-align: center;
-      margin-top: 30px;
-    }
-    .preview {
-      margin-top: 20px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      border-left: 4px solid #1890ff;
-    }
-      font-size: 16px;
-      width: 100%;
-    }
-    .test-btn {
-      background: #faad14;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      width: 100%;
-      margin-top: 10px;
-    }
-    .message {
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 20px;
-    }
-    .success {
-      background: #f6ffed;
-      border: 1px solid #b7eb8f;
-      color: #52c41a;
-    }
-    .error {
-      background: #fff2f0;
-      border: 1px solid #ffccc7;
-      color: #ff4d4f;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>新闻图片生成系统 - 后台配置</h1>
+  const adminHTML = `
+  <!DOCTYPE html>
+  <html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻图片生成 - 管理后台</title>
+    <style>
+      body {
+        font-family: 'Microsoft YaHei', Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1, h2 {
+        color: #2c3e50;
+      }
+      .card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input[type="text"], input[type="number"], input[type="color"], textarea, select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-right: 10px;
+      }
+      button:hover {
+        background: #2980b9;
+      }
+      .tag-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .tag {
+        background: #e0f7fa;
+        padding: 5px 10px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+      }
+      .tag button {
+        background: none;
+        color: #f44336;
+        border: none;
+        margin-left: 5px;
+        padding: 0 5px;
+        cursor: pointer;
+      }
+      .preview {
+        max-width: 100%;
+        height: auto;
+        margin-top: 20px;
+        border: 1px solid #ddd;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .tabs {
+        display: flex;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #ddd;
+      }
+      .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+      }
+      .tab.active {
+        border-bottom: 2px solid #3498db;
+        font-weight: bold;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .success {
+        color: #27ae60;
+        font-weight: bold;
+      }
+      .error {
+        color: #e74c3c;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>📰 新闻图片生成 - 管理后台</h1>
+      <p>在这里配置API参数、关键词和图片样式</p>
+    </div>
     
-    <div id="message"></div>
+    <div class="tabs">
+      <div class="tab active" data-tab="api">API配置</div>
+      <div class="tab" data-tab="keywords">关键词设置</div>
+      <div class="tab" data-tab="style">图片样式</div>
+      <div class="tab" data-tab="layout">排版布局</div>
+      <div class="tab" data-tab="test">测试生成</div>
+    </div>
     
     <form id="configForm">
+      <div id="apiTab" class="tab-content active">
+        <div class="card">
+          <h2>🔌 API配置</h2>
+          <div class="form-group">
+            <label for="apiUrl">API地址</label>
+            <input type="text" id="apiUrl" name="apiUrl" placeholder="例如: https://aihubmix.com/v1/chat/completions">
+          </div>
+          <div class="form-group">
+            <label for="apiKey">API密钥</label>
+            <input type="text" id="apiKey" name="apiKey" placeholder="以sk-开头的密钥">
+          </div>
+          <div class="form-group">
+            <label for="model">模型</label>
+            <input type="text" id="model" name="model" placeholder="例如: gpt-4o-mini">
+          </div>
+          <div class="form-group">
+            <label for="useMockData">
+              <input type="checkbox" id="useMockData" name="useMockData">
+              使用模拟数据（不调用API，用于测试）
+            </label>
+          </div>
+        </div>
+      </div>
       
-      <!-- API 配置部分 -->
-      <div class="section">
-        <div class="section-title">🤖 AI API 配置</div>
-        <div class="form-group">
-          <label>OpenAI API 地址</label>
-          <input type="text" id="apiUrl" placeholder="https://aihubmix.com/v1/chat/completions">
-        </div>
-        <div class="form-group">
-          <label>API Key</label>
-          <input type="password" id="apiKey" placeholder="输入您的API Key">
-        </div>
-        <div class="form-group">
-          <label>模型名称</label>
-          <input type="text" id="model" placeholder="输入模型名称，如：gpt-3.5-turbo、gpt-4、claude-3等">
-        </div>
-        <div class="form-group">
-          <label>关键词（用逗号分隔）</label>
-          <input type="text" id="keywords" placeholder="科技,社会,财经">
-        </div>
-        <div class="form-group">
-          <label>
-            <input type="checkbox" id="useMockData" style="width: auto; margin-right: 8px;">
-            使用模拟数据（API余额不足时使用）
-          </label>
+      <div id="keywordsTab" class="tab-content">
+        <div class="card">
+          <h2>🔍 关键词设置</h2>
+          <div class="form-group">
+            <label for="newKeyword">添加关键词</label>
+            <div style="display: flex;">
+              <input type="text" id="newKeyword" placeholder="输入关键词">
+              <button type="button" onclick="addKeyword()" style="margin-left: 10px; width: 80px;">添加</button>
+            </div>
+            <div id="keywordsContainer" class="tag-container">
+              <!-- 关键词标签将在这里动态生成 -->
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- 图片样式配置部分 -->
-      <div class="section">
-        <div class="section-title">🎨 图片样式配置</div>
-        
-        <div class="form-row">
-          <div class="form-col">
-            <label>图片宽度 (px)</label>
-            <input type="number" id="imageWidth" placeholder="800" min="400" max="1200">
+      
+      <div id="styleTab" class="tab-content">
+        <div class="card">
+          <h2>🎨 图片样式</h2>
+          <div class="grid">
+            <div>
+              <div class="form-group">
+                <label for="width">图片宽度</label>
+                <input type="number" id="width" name="width" min="300" max="1200">
+              </div>
+              <div class="form-group">
+                <label for="height">图片高度</label>
+                <input type="number" id="height" name="height" min="300" max="1600">
+              </div>
+              <div class="form-group">
+                <label for="mainTitle">主标题</label>
+                <input type="text" id="mainTitle" name="mainTitle">
+              </div>
+              <div class="form-group">
+                <label for="backgroundColor">背景颜色</label>
+                <input type="color" id="backgroundColor" name="backgroundColor">
+              </div>
+            </div>
+            <div>
+              <div class="form-group">
+                <label for="titleFontSize">标题字体大小</label>
+                <input type="number" id="titleFontSize" name="titleFontSize" min="12" max="72">
+              </div>
+              <div class="form-group">
+                <label for="fontSize">正文字体大小</label>
+                <input type="number" id="fontSize" name="fontSize" min="8" max="36">
+              </div>
+              <div class="form-group">
+                <label for="titleColor">标题颜色</label>
+                <input type="color" id="titleColor" name="titleColor">
+              </div>
+              <div class="form-group">
+                <label for="textColor">正文颜色</label>
+                <input type="color" id="textColor" name="textColor">
+              </div>
+            </div>
           </div>
-          <div class="form-col">
-            <label>图片高度 (px)</label>
-            <input type="number" id="imageHeight" placeholder="600" min="400" max="1000">
+          <div class="form-group">
+            <label for="backgroundImage">背景图片URL</label>
+            <input type="text" id="backgroundImage" name="backgroundImage" placeholder="输入背景图片的URL">
           </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-col">
-            <label>标题字体大小 (px)</label>
-            <input type="number" id="titleFontSize" placeholder="28" min="16" max="48">
+          <div class="form-group">
+            <label for="logoImage">Logo图片URL</label>
+            <input type="text" id="logoImage" name="logoImage" placeholder="输入Logo图片的URL">
           </div>
-          <div class="form-col">
-            <label>正文字体大小 (px)</label>
-            <input type="number" id="textFontSize" placeholder="16" min="12" max="24">
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-col">
-            <label>背景颜色</label>
-            <input type="color" id="backgroundColor" class="color-picker" value="#ffffff">
-          </div>
-          <div class="form-col">
-            <label>标题颜色</label>
-            <input type="color" id="titleColor" class="color-picker" value="#333333">
-          </div>
-          <div class="form-col">
-            <label>文字颜色</label>
-            <input type="color" id="textColor" class="color-picker" value="#666666">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>主标题文字</label>
-          <input type="text" id="mainTitle" placeholder="今日热榜新闻" value="今日热榜新闻">
-        </div>
-
-        <div class="form-group">
-          <label>背景图片URL（可选）</label>
-          <input type="text" id="backgroundImage" placeholder="https://example.com/background.jpg">
-        </div>
-
-        <div class="form-group">
-          <label>Logo图片URL（可选）</label>
-          <input type="text" id="logoImage" placeholder="https://example.com/logo.png">
         </div>
       </div>
-
-      <!-- 按钮组 -->
-      <div class="btn-group">
-        <button type="submit" class="save-btn">💾 保存配置</button>
-        <button type="button" class="test-btn" onclick="testGenerate()">🚀 测试生成</button>
+      
+      <div id="layoutTab" class="tab-content">
+        <div class="card">
+          <h2>📐 排版布局</h2>
+          <div class="grid">
+            <div>
+              <div class="form-group">
+                <label for="titleY">主标题Y坐标</label>
+                <input type="number" id="titleY" name="titleY" min="20" max="200">
+              </div>
+              <div class="form-group">
+                <label for="dateY">日期Y坐标</label>
+                <input type="number" id="dateY" name="dateY" min="40" max="300">
+              </div>
+              <div class="form-group">
+                <label for="keywordsY">关键词Y坐标</label>
+                <input type="number" id="keywordsY" name="keywordsY" min="60" max="400">
+              </div>
+            </div>
+            <div>
+              <div class="form-group">
+                <label for="textStartY">正文起始Y坐标</label>
+                <input type="number" id="textStartY" name="textStartY" min="100" max="500">
+              </div>
+              <div class="form-group">
+                <label for="lineHeight">行高</label>
+                <input type="number" id="lineHeight" name="lineHeight" min="20" max="100">
+              </div>
+              <div class="form-group">
+                <label for="textLeftPadding">左侧内边距</label>
+                <input type="number" id="textLeftPadding" name="textLeftPadding" min="10" max="200">
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <!-- 预览区域 -->
-      <div class="preview" id="preview" style="display: none;">
-        <h3>📋 配置预览</h3>
-        <div id="previewContent"></div>
+      
+      <div id="testTab" class="tab-content">
+        <div class="card">
+          <h2>🧪 测试生成</h2>
+          <p>点击下方按钮测试生成新闻图片</p>
+          <button type="button" id="testButton" onclick="testGenerate()">🔄 测试生成</button>
+          <div id="testResult"></div>
+          <div id="imagePreview"></div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <button type="button" onclick="saveConfig()">💾 保存配置</button>
+        <span id="saveResult"></span>
       </div>
     </form>
-  </div>
-
-  <script>
-    // 加载配置
-    async function loadConfig() {
-      try {
-        const response = await fetch('/api/config');
-        const data = await response.json();
-        if (data.success) {
-          const config = data.data;
-          
-          document.getElementById('apiUrl').value = config.openai.apiUrl || '';
-          document.getElementById('apiKey').value = config.openai.apiKey || '';
-          document.getElementById('model').value = config.openai.model || 'gpt-3.5-turbo';
-          document.getElementById('keywords').value = config.keywords.join(',') || '';
-          
-          // 加载图片样式配置
-          document.getElementById('imageWidth').value = config.imageStyle.width || 800;
-          document.getElementById('imageHeight').value = config.imageStyle.height || 600;
-          document.getElementById('titleFontSize').value = config.imageStyle.titleFontSize || 28;
-          document.getElementById('textFontSize').value = config.imageStyle.fontSize || 16;
-          document.getElementById('backgroundColor').value = config.imageStyle.backgroundColor || '#ffffff';
-          document.getElementById('titleColor').value = config.imageStyle.titleColor || '#333333';
-          document.getElementById('textColor').value = config.imageStyle.textColor || '#666666';
-          document.getElementById('mainTitle').value = config.imageStyle.mainTitle || '今日热榜新闻';
-          document.getElementById('backgroundImage').value = config.imageStyle.backgroundImage || '';
-          document.getElementById('logoImage').value = config.imageStyle.logoImage || '';
-          document.getElementById('useMockData').checked = config.useMockData || false;
-        }
-      } catch (error) {
-        showMessage('加载配置失败: ' + error.message, 'error');
-      }
-    }
     
-    // 显示消息
-    function showMessage(message, type) {
-      const messageDiv = document.getElementById('message');
-      messageDiv.className = \`message \${type}\`;
-      messageDiv.textContent = message;
-      setTimeout(() => {
-        messageDiv.textContent = '';
-        messageDiv.className = '';
-      }, 3000);
-    }
-    
-    // 保存配置
-    document.getElementById('configForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    <script>
+      // 当前配置
+      let currentConfig = ${JSON.stringify(config, null, 2)};
       
-      const keywords = document.getElementById('keywords').value.split(',').map(k => k.trim()).filter(k => k);
-      
-      const config = {
-        openai: {
-          apiUrl: document.getElementById('apiUrl').value,
-          apiKey: document.getElementById('apiKey').value,
-          model: document.getElementById('model').value
-        },
-        keywords: keywords,
-        useMockData: document.getElementById('useMockData').checked,
-        imageStyle: {
-          width: parseInt(document.getElementById('imageWidth').value) || 800,
-          height: parseInt(document.getElementById('imageHeight').value) || 600,
-          titleFontSize: parseInt(document.getElementById('titleFontSize').value) || 28,
-          fontSize: parseInt(document.getElementById('textFontSize').value) || 16,
-          titleColor: document.getElementById('titleColor').value || '#333333',
-          textColor: document.getElementById('textColor').value || '#666666',
-          backgroundColor: document.getElementById('backgroundColor').value || '#ffffff',
-          mainTitle: document.getElementById('mainTitle').value || '今日热榜新闻',
-          backgroundImage: document.getElementById('backgroundImage').value || '',
-          logoImage: document.getElementById('logoImage').value || ''
-        }
+      // 页面加载时填充表单
+      window.onload = function() {
+        // API配置
+        document.getElementById('apiUrl').value = currentConfig.openai.apiUrl || '';
+        document.getElementById('apiKey').value = currentConfig.openai.apiKey || '';
+        document.getElementById('model').value = currentConfig.openai.model || '';
+        document.getElementById('useMockData').checked = currentConfig.useMockData || false;
+        
+        // 关键词
+        renderKeywords();
+        
+        // 图片样式
+        const style = currentConfig.imageStyle || {};
+        document.getElementById('width').value = style.width || 600;
+        document.getElementById('height').value = style.height || 800;
+        document.getElementById('titleFontSize').value = style.titleFontSize || 28;
+        document.getElementById('fontSize').value = style.fontSize || 16;
+        document.getElementById('titleColor').value = style.titleColor || '#333333';
+        document.getElementById('textColor').value = style.textColor || '#666666';
+        document.getElementById('backgroundColor').value = style.backgroundColor || '#ffffff';
+        document.getElementById('mainTitle').value = style.mainTitle || '今日摸鱼见闻';
+        document.getElementById('backgroundImage').value = style.backgroundImage || '';
+        document.getElementById('logoImage').value = style.logoImage || '';
+        
+        // 排版布局
+        document.getElementById('titleY').value = style.titleY || 50;
+        document.getElementById('dateY').value = style.dateY || 80;
+        document.getElementById('keywordsY').value = style.keywordsY || 110;
+        document.getElementById('textStartY').value = style.textStartY || 190;
+        document.getElementById('lineHeight').value = style.lineHeight || 40;
+        document.getElementById('textLeftPadding').value = style.textLeftPadding || 60;
       };
       
-      try {
-        const response = await fetch('/api/config', {
+      // 渲染关键词标签
+      function renderKeywords() {
+        const container = document.getElementById('keywordsContainer');
+        container.innerHTML = '';
+        
+        currentConfig.keywords.forEach((keyword, index) => {
+          const tag = document.createElement('div');
+          tag.className = 'tag';
+          tag.innerHTML = keyword + '<button type="button" onclick="removeKeyword(' + index + ')">×</button>';
+          container.appendChild(tag);
+        });
+      }
+      
+      // 添加关键词
+      function addKeyword() {
+        const input = document.getElementById('newKeyword');
+        const keyword = input.value.trim();
+        
+        if (keyword && !currentConfig.keywords.includes(keyword)) {
+          currentConfig.keywords.push(keyword);
+          renderKeywords();
+          input.value = '';
+        }
+      }
+      
+      // 删除关键词
+      function removeKeyword(index) {
+        currentConfig.keywords.splice(index, 1);
+        renderKeywords();
+      }
+      
+      // 保存配置
+      function saveConfig() {
+        // 收集API配置
+        currentConfig.openai.apiUrl = document.getElementById('apiUrl').value;
+        currentConfig.openai.apiKey = document.getElementById('apiKey').value;
+        currentConfig.openai.model = document.getElementById('model').value;
+        currentConfig.useMockData = document.getElementById('useMockData').checked;
+        
+        // 收集图片样式
+        currentConfig.imageStyle = {
+          width: parseInt(document.getElementById('width').value),
+          height: parseInt(document.getElementById('height').value),
+          titleFontSize: parseInt(document.getElementById('titleFontSize').value),
+          fontSize: parseInt(document.getElementById('fontSize').value),
+          titleColor: document.getElementById('titleColor').value,
+          textColor: document.getElementById('textColor').value,
+          backgroundColor: document.getElementById('backgroundColor').value,
+          mainTitle: document.getElementById('mainTitle').value,
+          backgroundImage: document.getElementById('backgroundImage').value,
+          logoImage: document.getElementById('logoImage').value,
+          
+          // 排版布局
+          titleY: parseInt(document.getElementById('titleY').value),
+          dateY: parseInt(document.getElementById('dateY').value),
+          keywordsY: parseInt(document.getElementById('keywordsY').value),
+          textStartY: parseInt(document.getElementById('textStartY').value),
+          lineHeight: parseInt(document.getElementById('lineHeight').value),
+          textLeftPadding: parseInt(document.getElementById('textLeftPadding').value)
+        };
+        
+        // 发送到服务器
+        fetch('/api/config', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(config)
+          body: JSON.stringify(currentConfig)
+        })
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('saveResult').innerHTML = '<span class="success">✅ 配置已保存</span>';
+          setTimeout(() => {
+            document.getElementById('saveResult').innerHTML = '';
+          }, 3000);
+        })
+        .catch(error => {
+          document.getElementById('saveResult').innerHTML = '<span class="error">❌ 保存失败: ' + error.message + '</span>';
         });
-        
-        const data = await response.json();
-        if (data.success) {
-          showMessage('配置保存成功！', 'success');
-        } else {
-          showMessage('配置保存失败: ' + data.message, 'error');
-        }
-      } catch (error) {
-        showMessage('配置保存失败: ' + error.message, 'error');
       }
-    });
-    
-    // 测试生成
-    async function testGenerate() {
-      try {
-        showMessage('正在生成新闻图片...', 'success');
-        const response = await fetch('/api/news-image');
-        const data = await response.json();
+      
+      // 测试生成
+      function testGenerate() {
+        document.getElementById('testButton').disabled = true;
+        document.getElementById('testButton').textContent = '⏳ 生成中...';
+        document.getElementById('testResult').innerHTML = '<p>正在生成图片，请稍候...</p>';
         
-        if (data.success) {
-          showMessage('新闻图片生成成功！', 'success');
-          window.open(data.data.imageUrl, '_blank');
-        } else {
-          showMessage('生成失败: ' + data.message, 'error');
-        }
-      } catch (error) {
-        showMessage('生成失败: ' + error.message, 'error');
+        fetch('/api/news-image')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('testButton').disabled = false;
+          document.getElementById('testButton').textContent = '🔄 测试生成';
+          
+          if (data.success) {
+            document.getElementById('testResult').innerHTML = '<p class="success">✅ 图片生成成功</p>';
+            document.getElementById('imagePreview').innerHTML = '<img src="/news-latest.png?' + new Date().getTime() + '" class="preview" alt="生成的新闻图片">';
+          } else {
+            document.getElementById('testResult').innerHTML = '<p class="error">❌ 生成失败: ' + data.message + '</p>';
+          }
+        })
+        .catch(error => {
+          document.getElementById('testButton').disabled = false;
+          document.getElementById('testButton').textContent = '🔄 测试生成';
+          document.getElementById('testResult').innerHTML = '<p class="error">❌ 请求失败: ' + error.message + '</p>';
+        });
       }
-    }
-    
-    // 页面加载时加载配置
-    loadConfig();
-  </script>
-</body>
-</html>`;
-
-  res.send(adminHtml);
+      
+      // 标签页切换
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          // 移除所有active类
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          
+          // 添加active类到当前标签
+          tab.classList.add('active');
+          document.getElementById(tab.dataset.tab + 'Tab').classList.add('active');
+        });
+      });
+    </script>
+  </body>
+  </html>
+  `;
+  
+  res.send(adminHTML);
 });
 
 // API路由：获取配置
