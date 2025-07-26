@@ -66,12 +66,55 @@ function saveConfig(config) {
 // 获取当前配置
 let config = loadConfig();
 
+// 模拟新闻数据
+function getMockNewsData(keywords) {
+  const mockData = {
+    '科技': [
+      '2025世界人工智能大会在沪开幕，聚焦AI前沿技术与产业趋势',
+      '《中国智·惠世界(2025)》案例集发布，展现AI国际合作成果',
+      '人工智能大会聚焦AI产业链创新，机器人现场表演',
+      '高校加速布局未来赛道，智能+专业成新趋势',
+      '得物人工智能查验系统获世界人工智能大会最高奖项"SAIL奖"'
+    ],
+    '社会': [
+      '财政部：上半年财政运行总体平稳，社保就业支出增长9.2%',
+      '保民生、促消费，财政政策有力度有温度',
+      '北京希望"贡献中国智慧"，倡议成立世界人工智能合作组织',
+      '中国倡议成立世界人工智能合作组织，贡献中国智慧',
+      '7月26日五件财经大事抢先看'
+    ],
+    '财经': [
+      '以太坊ETF资金净流入超越比特币，或成币圈新主导',
+      '美股盘前：英特尔大跌8.7%，金价大跌美元走强',
+      '净利润大跌22%！LVMH迎来"风浪时刻"',
+      '2025年07月26日第4版：财经新闻 - 上海证券报',
+      '喜娜AI速递：今日财经热点要闻回顾'
+    ]
+  };
+  
+  const allNews = [];
+  keywords.forEach(keyword => {
+    if (mockData[keyword]) {
+      allNews.push(...mockData[keyword]);
+    }
+  });
+  
+  // 返回10条新闻
+  return allNews.slice(0, 10);
+}
+
 // 调用AI API获取新闻
 async function getNewsFromOpenAI(keywords) {
   try {
     console.log('   - 准备调用AI API，关键词:', keywords);
     console.log('   - API地址:', config.openai.apiUrl);
     console.log('   - 模型:', config.openai.model);
+    
+    // 检查是否使用模拟数据模式
+    if (config.useMockData) {
+      console.log('   - 使用模拟数据模式');
+      return getMockNewsData(keywords);
+    }
     
     const prompt = `请搜索今天与以下关键词相关的新闻，返回5-10条新闻标题，格式为JSON数组：
 关键词：${keywords.join('、')}
@@ -82,34 +125,55 @@ async function getNewsFromOpenAI(keywords) {
 3. 返回格式：[{"title": "新闻标题1"}, {"title": "新闻标题2"}]`;
 
     console.log('   - 发送请求到AI API...');
-    // 适配 aihubmix.com API格式
-    const response = await axios.post(config.openai.apiUrl, {
-      model: config.openai.model,
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7,
-      stream: false
-    }, {
-      headers: {
-        'Authorization': `Bearer ${config.openai.apiKey}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
+    
+    // 根据API提供商选择不同的请求格式
+    let requestData;
+    let headers = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    };
+    
+    if (config.openai.apiUrl.includes('poloai.top')) {
+      // poloai.top API格式
+      requestData = {
+        input: prompt,
+        model: config.openai.model,
+        max_tokens: 1000,
+        temperature: 0.7
+      };
+    } else {
+      // 标准OpenAI格式
+      requestData = {
+        model: config.openai.model,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+        stream: false
+      };
+      headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
+    }
+    
+    const response = await axios.post(config.openai.apiUrl, requestData, { headers });
 
     // 适配不同的响应格式
     let content;
+    console.log('API响应数据:', JSON.stringify(response.data, null, 2));
+    
     if (response.data.choices && response.data.choices[0]) {
       content = response.data.choices[0].message.content;
     } else if (response.data.content) {
       content = response.data.content;
     } else if (response.data.text) {
       content = response.data.text;
+    } else if (response.data.response) {
+      content = response.data.response;
+    } else if (response.data.output) {
+      content = response.data.output;
     } else {
       content = JSON.stringify(response.data);
     }
@@ -484,6 +548,12 @@ app.get('/admin', (req, res) => {
           <label>关键词（用逗号分隔）</label>
           <input type="text" id="keywords" placeholder="科技,社会,财经">
         </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="useMockData" style="width: auto; margin-right: 8px;">
+            使用模拟数据（API余额不足时使用）
+          </label>
+        </div>
       </div>
 
       <!-- 图片样式配置部分 -->
@@ -582,6 +652,7 @@ app.get('/admin', (req, res) => {
           document.getElementById('mainTitle').value = config.imageStyle.mainTitle || '今日热榜新闻';
           document.getElementById('backgroundImage').value = config.imageStyle.backgroundImage || '';
           document.getElementById('logoImage').value = config.imageStyle.logoImage || '';
+          document.getElementById('useMockData').checked = config.useMockData || false;
         }
       } catch (error) {
         showMessage('加载配置失败: ' + error.message, 'error');
@@ -612,6 +683,7 @@ app.get('/admin', (req, res) => {
           model: document.getElementById('model').value
         },
         keywords: keywords,
+        useMockData: document.getElementById('useMockData').checked,
         imageStyle: {
           width: parseInt(document.getElementById('imageWidth').value) || 800,
           height: parseInt(document.getElementById('imageHeight').value) || 600,
