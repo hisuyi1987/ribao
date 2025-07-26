@@ -85,7 +85,20 @@ if (!fs.existsSync('public')) {
 function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      const savedConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+      
+      // 合并配置，确保新配置项存在
+      const mergedConfig = {
+        ...defaultConfig,
+        ...savedConfig,
+        imageStyle: {
+          ...defaultConfig.imageStyle,
+          ...savedConfig.imageStyle
+        }
+      };
+      
+      console.log('配置加载成功，使用合并后的配置');
+      return mergedConfig;
     }
   } catch (error) {
     console.error('加载配置失败:', error.message);
@@ -358,6 +371,8 @@ async function getNewsFromOpenAI(keywords) {
 // 生成图片（使用Canvas生成PNG）
 async function generateImage(newsTitles, keywords) {
   const today = new Date().toLocaleDateString('zh-CN');
+  
+  console.log('生成图片配置:', JSON.stringify(config.imageStyle, null, 2));
   
   // 检查是否有canvas模块
   let Canvas;
