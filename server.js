@@ -218,20 +218,20 @@ async function getNewsFromOpenAI(keywords) {
     } else {
       content = JSON.stringify(response.data);
     }
-    
+
     // 尝试解析JSON
     try {
       const newsData = JSON.parse(content);
       return newsData.map(item => item.title);
     } catch (parseError) {
       console.log('JSON解析失败，尝试其他方式提取新闻标题...');
-      
+
       // 如果JSON解析失败，尝试从HTML或文本中提取标题
       if (content.includes('<') && content.includes('>')) {
         // 如果是HTML格式，尝试提取文本内容
         console.log('检测到HTML格式，尝试提取文本...');
         const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-        
+
         // 尝试从文本中提取新闻标题
         const lines = textContent.split(/[。！？\n]/).filter(line => line.trim().length > 5);
         return lines.slice(0, 10); // 返回前10行作为新闻标题
@@ -361,7 +361,6 @@ async function generateImage(newsTitles, keywords) {
     ctx.textAlign = 'right';
     ctx.fillText(config.footerText, canvas.width - 20, canvas.height - 20);
   }
-  
   console.log('开始生成PNG图片...');
   // 保存为PNG
   const buffer = canvas.toBuffer('image/png');
