@@ -446,10 +446,6 @@ async function generateImage(newsTitles, keywords) {
   if (global.customContent) {
     console.log('✅ 开始绘制自定义内容:', global.customContent);
     y += 20; // 额外间距
-    ctx.font = `bold ${config.imageStyle.fontSize + 2}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-    ctx.fillStyle = '#1890ff';
-    ctx.fillText('自定义内容:', 30, y);
-    y += lineHeight;
     ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
     ctx.fillStyle = '#ff6b35';
     ctx.fillText(global.customContent, 30, y);
@@ -468,11 +464,16 @@ async function generateImage(newsTitles, keywords) {
   }
   
   // 绘制落款（如果有）
+  console.log('检查落款文本:', config.footerText);
   if (config.footerText && config.footerText.trim()) {
+    console.log('✅ 开始绘制落款:', config.footerText);
     ctx.font = `${config.imageStyle.fontSize - 2}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
     ctx.fillStyle = '#999999';
     ctx.textAlign = 'right';
     ctx.fillText(config.footerText, canvas.width - 20, canvas.height - 20);
+    console.log('✅ 落款绘制完成');
+  } else {
+    console.log('❌ 没有落款文本需要绘制');
   }
   console.log('开始生成PNG图片...');
   // 保存为PNG
