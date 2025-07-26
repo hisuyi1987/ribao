@@ -237,6 +237,15 @@ async function getNewsFromOpenAI(keywords) {
     try {
       // 首先尝试直接解析JSON
       const newsData = JSON.parse(content);
+      
+      // 提取自定义内容（如果有）
+      const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
+      if (customContentMatch && customContentMatch[1]) {
+        console.log('提取到自定义内容:', customContentMatch[1].trim());
+        // 将自定义内容存储到全局变量中，供图片生成时使用
+        global.customContent = customContentMatch[1].trim();
+      }
+      
       return newsData.map(item => item.title);
     } catch (parseError) {
       console.log('直接JSON解析失败，尝试提取JSON格式内容...');
@@ -247,6 +256,15 @@ async function getNewsFromOpenAI(keywords) {
         try {
           const jsonContent = jsonMatch[0];
           const newsData = JSON.parse(jsonContent);
+          
+          // 提取自定义内容（如果有）
+          const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
+          if (customContentMatch && customContentMatch[1]) {
+            console.log('提取到自定义内容:', customContentMatch[1].trim());
+            // 将自定义内容存储到全局变量中，供图片生成时使用
+            global.customContent = customContentMatch[1].trim();
+          }
+          
           return newsData.map(item => item.title);
         } catch (jsonError) {
           console.log('JSON数组解析失败，尝试逐行提取...');
@@ -275,6 +293,13 @@ async function getNewsFromOpenAI(keywords) {
       }
       
       if (titles.length > 0) {
+        // 提取自定义内容（如果有）
+        const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
+        if (customContentMatch && customContentMatch[1]) {
+          console.log('提取到自定义内容:', customContentMatch[1].trim());
+          // 将自定义内容存储到全局变量中，供图片生成时使用
+          global.customContent = customContentMatch[1].trim();
+        }
         return titles;
       }
       
@@ -286,15 +311,16 @@ async function getNewsFromOpenAI(keywords) {
                !trimmed.startsWith('```') &&
                !trimmed.startsWith('新闻标题');
       });
+      
+      // 提取自定义内容（如果有）
+      const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
+      if (customContentMatch && customContentMatch[1]) {
+        console.log('提取到自定义内容:', customContentMatch[1].trim());
+        // 将自定义内容存储到全局变量中，供图片生成时使用
+        global.customContent = customContentMatch[1].trim();
+      }
+      
       return fallbackLines.slice(0, 10);
-    }
-    
-    // 提取自定义内容（如果有）
-    const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
-    if (customContentMatch && customContentMatch[1]) {
-      console.log('提取到自定义内容:', customContentMatch[1].trim());
-      // 将自定义内容存储到全局变量中，供图片生成时使用
-      global.customContent = customContentMatch[1].trim();
     }
   } catch (error) {
     console.error('调用AI API失败:', error.message);
