@@ -31,6 +31,8 @@ const defaultConfig = {
   customSearchPrompt: '',
   // 添加落款文本
   footerText: '',
+  // 新闻条数设置
+  newsCount: 10,
   imageStyle: {
     width: 600,
     height: 800,
@@ -61,13 +63,15 @@ const defaultConfig = {
     // 自定义内容设置
     customContentFontSize: 16,
     customContentColor: '#ff6b35',
+    customContentX: 30, // 自定义内容X坐标
     customContentY: 600, // 自定义内容Y坐标
     
     // 落款设置
     footerFontSize: 14,
     footerColor: '#999999',
     footerY: 750, // 落款Y坐标
-    footerX: 580, // 落款X坐标（右对齐）
+    footerX: 300, // 落款X坐标（居中）
+    footerAlign: 'center', // 落款对齐方式：left, center, right
     
     // 背景设置
     backgroundColor: '#ffffff',
@@ -153,8 +157,8 @@ function getMockNewsData(keywords) {
     }
   });
   
-  // 返回10条新闻
-  return allNews.slice(0, 10);
+  // 返回配置的新闻条数
+  return allNews.slice(0, config.newsCount || 10);
 }
 
 // 调用AI API获取新闻
@@ -171,7 +175,7 @@ async function getNewsFromOpenAI(keywords) {
     }
     
     // 构建提示词
-    let prompt = `请搜索今天与以下关键词相关的新闻，返回5-10条新闻标题，格式为JSON数组：
+    let prompt = `请搜索今天与以下关键词相关的新闻，返回${config.newsCount}条新闻标题，格式为JSON数组：
 关键词：${keywords.join('、')}
 
 要求：
@@ -359,7 +363,7 @@ async function getNewsFromOpenAI(keywords) {
         global.customContent = null;
       }
       
-      return fallbackLines.slice(0, 10);
+      return fallbackLines.slice(0, config.newsCount || 10);
     }
   } catch (error) {
     console.error('调用AI API失败:', error.message);
@@ -474,10 +478,10 @@ async function generateImage(newsTitles, keywords) {
   console.log('检查自定义内容:', global.customContent);
   if (global.customContent) {
     console.log('✅ 开始绘制自定义内容:', global.customContent);
-    y += 20; // 额外间距
     ctx.font = `${config.imageStyle.customContentFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
     ctx.fillStyle = config.imageStyle.customContentColor;
-    ctx.fillText(global.customContent, config.imageStyle.textLeftPadding, y);
+    ctx.textAlign = 'left';
+    ctx.fillText(global.customContent, config.imageStyle.customContentX, config.imageStyle.customContentY);
     // 重置字体和颜色
     ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
     ctx.fillStyle = config.imageStyle.textColor;
@@ -498,8 +502,19 @@ async function generateImage(newsTitles, keywords) {
     console.log('✅ 开始绘制落款:', config.footerText);
     ctx.font = `${config.imageStyle.footerFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
     ctx.fillStyle = config.imageStyle.footerColor;
-    ctx.textAlign = 'right';
-    ctx.fillText(config.footerText, config.imageStyle.footerX, config.imageStyle.footerY);
+    
+    // 根据对齐方式设置文本对齐
+    if (config.imageStyle.footerAlign === 'center') {
+      ctx.textAlign = 'center';
+      ctx.fillText(config.footerText, config.imageStyle.footerX, config.imageStyle.footerY);
+    } else if (config.imageStyle.footerAlign === 'right') {
+      ctx.textAlign = 'right';
+      ctx.fillText(config.footerText, config.imageStyle.footerX, config.imageStyle.footerY);
+    } else {
+      ctx.textAlign = 'left';
+      ctx.fillText(config.footerText, config.imageStyle.footerX, config.imageStyle.footerY);
+    }
+    
     console.log('✅ 落款绘制完成');
   } else {
     console.log('❌ 没有落款文本需要绘制');
@@ -801,6 +816,10 @@ app.get('/admin', (req, res) => {
           <input type="text" id="footerText" placeholder="例如：豆包AI生成">
         </div>
         <div class="form-group">
+          <label>新闻条数 (5-10条)</label>
+          <input type="number" id="newsCount" placeholder="10" min="5" max="10" value="10">
+        </div>
+        <div class="form-group">
           <label>
             <input type="checkbox" id="useMockData" style="width: auto; margin-right: 8px;">
             使用模拟数据（API余额不足时使用）
@@ -916,9 +935,16 @@ app.get('/admin', (req, res) => {
             <label>自定义内容颜色</label>
             <input type="color" id="customContentColor" class="color-picker" value="#ff6b35">
           </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>自定义内容X坐标</label>
+            <input type="number" id="customContentX" placeholder="30" min="10" max="600">
+          </div>
           <div class="form-col">
             <label>自定义内容Y坐标</label>
-            <input type="number" id="customContentY" placeholder="600" min="400" max="800">
+            <input type="number" id="customContentY" placeholder="600" min="100" max="800">
           </div>
         </div>
 
@@ -933,15 +959,23 @@ app.get('/admin', (req, res) => {
             <input type="color" id="footerColor" class="color-picker" value="#999999">
           </div>
           <div class="form-col">
-            <label>落款X坐标</label>
-            <input type="number" id="footerX" placeholder="580" min="400" max="600">
+            <label>落款对齐方式</label>
+            <select id="footerAlign">
+              <option value="left">左对齐</option>
+              <option value="center" selected>居中</option>
+              <option value="right">右对齐</option>
+            </select>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-col">
+            <label>落款X坐标</label>
+            <input type="number" id="footerX" placeholder="300" min="10" max="600">
+          </div>
+          <div class="form-col">
             <label>落款Y坐标</label>
-            <input type="number" id="footerY" placeholder="750" min="600" max="800">
+            <input type="number" id="footerY" placeholder="750" min="100" max="800">
           </div>
         </div>
 
@@ -993,6 +1027,7 @@ app.get('/admin', (req, res) => {
           document.getElementById('keywords').value = config.keywords.join(',') || '';
           document.getElementById('customSearchPrompt').value = config.customSearchPrompt || '';
           document.getElementById('footerText').value = config.footerText || '';
+          document.getElementById('newsCount').value = config.newsCount || 10;
           
           // 加载图片样式配置
           document.getElementById('imageWidth').value = config.imageStyle.width || 600;
@@ -1018,12 +1053,14 @@ app.get('/admin', (req, res) => {
           
           document.getElementById('customContentFontSize').value = config.imageStyle.customContentFontSize || 16;
           document.getElementById('customContentColor').value = config.imageStyle.customContentColor || '#ff6b35';
+          document.getElementById('customContentX').value = config.imageStyle.customContentX || 30;
           document.getElementById('customContentY').value = config.imageStyle.customContentY || 600;
           
           document.getElementById('footerFontSize').value = config.imageStyle.footerFontSize || 14;
           document.getElementById('footerColor').value = config.imageStyle.footerColor || '#999999';
-          document.getElementById('footerX').value = config.imageStyle.footerX || 580;
+          document.getElementById('footerX').value = config.imageStyle.footerX || 300;
           document.getElementById('footerY').value = config.imageStyle.footerY || 750;
+          document.getElementById('footerAlign').value = config.imageStyle.footerAlign || 'center';
           
           document.getElementById('backgroundColor').value = config.imageStyle.backgroundColor || '#ffffff';
           document.getElementById('backgroundImage').value = config.imageStyle.backgroundImage || '';
@@ -1061,6 +1098,7 @@ app.get('/admin', (req, res) => {
         keywords: keywords,
         customSearchPrompt: document.getElementById('customSearchPrompt').value,
         footerText: document.getElementById('footerText').value,
+        newsCount: parseInt(document.getElementById('newsCount').value) || 10,
         useMockData: document.getElementById('useMockData').checked,
         imageStyle: {
           width: parseInt(document.getElementById('imageWidth').value) || 600,
@@ -1087,12 +1125,14 @@ app.get('/admin', (req, res) => {
           
           customContentFontSize: parseInt(document.getElementById('customContentFontSize').value) || 16,
           customContentColor: document.getElementById('customContentColor').value || '#ff6b35',
+          customContentX: parseInt(document.getElementById('customContentX').value) || 30,
           customContentY: parseInt(document.getElementById('customContentY').value) || 600,
           
           footerFontSize: parseInt(document.getElementById('footerFontSize').value) || 14,
           footerColor: document.getElementById('footerColor').value || '#999999',
-          footerX: parseInt(document.getElementById('footerX').value) || 580,
+          footerX: parseInt(document.getElementById('footerX').value) || 300,
           footerY: parseInt(document.getElementById('footerY').value) || 750,
+          footerAlign: document.getElementById('footerAlign').value || 'center',
           
           backgroundColor: document.getElementById('backgroundColor').value || '#ffffff',
           backgroundImage: document.getElementById('backgroundImage').value || '',
