@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  news-system:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./public:/app/public
+      - ./config.json:/app/config.json
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped 
