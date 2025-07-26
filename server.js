@@ -125,8 +125,67 @@ async function getNewsFromOpenAI(keywords) {
   }
 }
 
-// 生成图片（简化版本，使用HTML生成）
+// 生成图片（使用Canvas生成PNG）
 function generateImage(newsTitles, keywords) {
+  const today = new Date().toLocaleDateString('zh-CN');
+  
+  // 检查是否有canvas模块
+  let Canvas;
+  try {
+    Canvas = require('canvas');
+    console.log('✅ Canvas模块加载成功，将生成PNG图片');
+  } catch (error) {
+    console.log('❌ Canvas模块未安装，使用HTML生成');
+    console.log('错误详情:', error.message);
+    return generateHTMLImage(newsTitles, keywords);
+  }
+  
+  const canvas = Canvas.createCanvas(config.imageStyle.width, 600);
+  const ctx = canvas.getContext('2d');
+  
+  // 设置背景
+  ctx.fillStyle = config.imageStyle.backgroundColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // 设置字体
+  ctx.font = 'bold 28px Microsoft YaHei';
+  ctx.fillStyle = config.imageStyle.titleColor;
+  ctx.textAlign = 'center';
+  
+  // 绘制标题
+  ctx.fillText('今日热榜新闻', canvas.width / 2, 50);
+  
+  // 绘制日期
+  ctx.font = '16px Microsoft YaHei';
+  ctx.fillStyle = config.imageStyle.textColor;
+  ctx.fillText(today, canvas.width / 2, 80);
+  
+  // 绘制关键词
+  ctx.font = '18px Microsoft YaHei';
+  ctx.fillStyle = config.imageStyle.titleColor;
+  ctx.fillText(`关键词：${keywords.join('、')}`, canvas.width / 2, 110);
+  
+  // 绘制新闻列表
+  ctx.font = `${config.imageStyle.fontSize}px Microsoft YaHei`;
+  ctx.fillStyle = config.imageStyle.textColor;
+  ctx.textAlign = 'left';
+  
+  let y = 150;
+  newsTitles.forEach((title, index) => {
+    const text = `${index + 1}. ${title}`;
+    ctx.fillText(text, 30, y);
+    y += 30;
+  });
+  
+  // 保存为PNG
+  const buffer = canvas.toBuffer('image/png');
+  fs.writeFileSync('public/news-latest.png', buffer);
+  
+  return 'news-latest.png';
+}
+
+// 备用HTML生成方法
+function generateHTMLImage(newsTitles, keywords) {
   const today = new Date().toLocaleDateString('zh-CN');
   
   const html = `
