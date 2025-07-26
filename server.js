@@ -131,7 +131,7 @@ async function getNewsFromOpenAI(keywords) {
 }
 
 // 生成图片（使用Canvas生成PNG）
-function generateImage(newsTitles, keywords) {
+async function generateImage(newsTitles, keywords) {
   const today = new Date().toLocaleDateString('zh-CN');
   
   // 检查是否有canvas模块
@@ -146,8 +146,8 @@ function generateImage(newsTitles, keywords) {
     return generateHTMLImage(newsTitles, keywords);
   }
   
-  console.log('创建Canvas，尺寸:', config.imageStyle.width, 'x 600');
-  const canvas = Canvas.createCanvas(config.imageStyle.width, 600);
+  console.log('创建Canvas，尺寸:', config.imageStyle.width, 'x', config.imageStyle.height);
+  const canvas = Canvas.createCanvas(config.imageStyle.width, config.imageStyle.height);
   const ctx = canvas.getContext('2d');
   
   console.log('设置背景色:', config.imageStyle.backgroundColor);
@@ -155,26 +155,37 @@ function generateImage(newsTitles, keywords) {
   ctx.fillStyle = config.imageStyle.backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // 设置字体 - 使用 DejaVu Sans 字体
-  ctx.font = 'bold 28px "DejaVu Sans"';
+  // 如果有背景图片，绘制背景图片
+  if (config.imageStyle.backgroundImage) {
+    try {
+      console.log('加载背景图片:', config.imageStyle.backgroundImage);
+      const backgroundImg = await Canvas.loadImage(config.imageStyle.backgroundImage);
+      ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+    } catch (error) {
+      console.log('背景图片加载失败，使用纯色背景:', error.message);
+    }
+  }
+  
+  // 设置字体 - 使用中文字体
+  ctx.font = `bold ${config.imageStyle.titleFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
   ctx.fillStyle = config.imageStyle.titleColor;
   ctx.textAlign = 'center';
   
-  // 绘制标题
-  ctx.fillText('Today News Report', canvas.width / 2, 50);
+  // 绘制主标题
+  ctx.fillText(config.imageStyle.mainTitle, canvas.width / 2, 50);
   
   // 绘制日期
-  ctx.font = '16px "DejaVu Sans"';
+  ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
   ctx.fillStyle = config.imageStyle.textColor;
   ctx.fillText(today, canvas.width / 2, 80);
   
   // 绘制关键词
-  ctx.font = '18px "DejaVu Sans"';
+  ctx.font = `${config.imageStyle.fontSize + 2}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
   ctx.fillStyle = config.imageStyle.titleColor;
-  ctx.fillText(`Keywords: ${keywords.join(', ')}`, canvas.width / 2, 110);
+  ctx.fillText(`关键词：${keywords.join('、')}`, canvas.width / 2, 110);
   
   // 绘制新闻列表
-  ctx.font = `${config.imageStyle.fontSize}px "DejaVu Sans"`;
+  ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
   ctx.fillStyle = config.imageStyle.textColor;
   ctx.textAlign = 'left';
   
@@ -286,7 +297,7 @@ app.get('/api/news-image', async (req, res) => {
     
     // 生成图片
     console.log('3. 开始生成图片...');
-    const imagePath = generateImage(newsTitles, config.keywords);
+    const imagePath = await generateImage(newsTitles, config.keywords);
     console.log('4. 图片生成完成，路径:', imagePath);
     
     console.log('5. 返回响应...');
@@ -326,7 +337,7 @@ app.get('/admin', (req, res) => {
       background: #f5f5f5;
     }
     .container {
-      max-width: 800px;
+      max-width: 1000px;
       margin: 0 auto;
       background: white;
       padding: 30px;
@@ -338,8 +349,30 @@ app.get('/admin', (req, res) => {
       text-align: center;
       margin-bottom: 30px;
     }
+    .section {
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1890ff;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #1890ff;
+      padding-bottom: 5px;
+    }
     .form-group {
       margin-bottom: 20px;
+    }
+    .form-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .form-col {
+      flex: 1;
     }
     label {
       display: block;
@@ -353,6 +386,15 @@ app.get('/admin', (req, res) => {
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
+      box-sizing: border-box;
+    }
+    .color-picker {
+      width: 60px !important;
+      height: 40px;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
     }
     .save-btn {
       background: #52c41a;
@@ -361,6 +403,29 @@ app.get('/admin', (req, res) => {
       padding: 12px 24px;
       border-radius: 4px;
       cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    .test-btn {
+      background: #1890ff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .btn-group {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .preview {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      border-left: 4px solid #1890ff;
+    }
       font-size: 16px;
       width: 100%;
     }
@@ -399,28 +464,96 @@ app.get('/admin', (req, res) => {
     <div id="message"></div>
     
     <form id="configForm">
-      <div class="form-group">
-        <label>OpenAI API 地址</label>
-        <input type="text" id="apiUrl" placeholder="https://api.openai.com/v1/chat/completions">
-      </div>
       
-      <div class="form-group">
-        <label>API Key</label>
-        <input type="password" id="apiKey" placeholder="请输入您的OpenAI API Key">
+      <!-- API 配置部分 -->
+      <div class="section">
+        <div class="section-title">🤖 AI API 配置</div>
+        <div class="form-group">
+          <label>OpenAI API 地址</label>
+          <input type="text" id="apiUrl" placeholder="https://aihubmix.com/v1/chat/completions">
+        </div>
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="apiKey" placeholder="输入您的API Key">
+        </div>
+        <div class="form-group">
+          <label>模型名称</label>
+          <input type="text" id="model" placeholder="输入模型名称，如：gpt-3.5-turbo、gpt-4、claude-3等">
+        </div>
+        <div class="form-group">
+          <label>关键词（用逗号分隔）</label>
+          <input type="text" id="keywords" placeholder="科技,社会,财经">
+        </div>
       </div>
-      
-      <div class="form-group">
-        <label>模型名称</label>
-        <input type="text" id="model" placeholder="输入模型名称，如：gpt-3.5-turbo、gpt-4、claude-3等">
+
+      <!-- 图片样式配置部分 -->
+      <div class="section">
+        <div class="section-title">🎨 图片样式配置</div>
+        
+        <div class="form-row">
+          <div class="form-col">
+            <label>图片宽度 (px)</label>
+            <input type="number" id="imageWidth" placeholder="800" min="400" max="1200">
+          </div>
+          <div class="form-col">
+            <label>图片高度 (px)</label>
+            <input type="number" id="imageHeight" placeholder="600" min="400" max="1000">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>标题字体大小 (px)</label>
+            <input type="number" id="titleFontSize" placeholder="28" min="16" max="48">
+          </div>
+          <div class="form-col">
+            <label>正文字体大小 (px)</label>
+            <input type="number" id="textFontSize" placeholder="16" min="12" max="24">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>背景颜色</label>
+            <input type="color" id="backgroundColor" class="color-picker" value="#ffffff">
+          </div>
+          <div class="form-col">
+            <label>标题颜色</label>
+            <input type="color" id="titleColor" class="color-picker" value="#333333">
+          </div>
+          <div class="form-col">
+            <label>文字颜色</label>
+            <input type="color" id="textColor" class="color-picker" value="#666666">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>主标题文字</label>
+          <input type="text" id="mainTitle" placeholder="今日热榜新闻" value="今日热榜新闻">
+        </div>
+
+        <div class="form-group">
+          <label>背景图片URL（可选）</label>
+          <input type="text" id="backgroundImage" placeholder="https://example.com/background.jpg">
+        </div>
+
+        <div class="form-group">
+          <label>Logo图片URL（可选）</label>
+          <input type="text" id="logoImage" placeholder="https://example.com/logo.png">
+        </div>
       </div>
-      
-      <div class="form-group">
-        <label>关键词（用逗号分隔）</label>
-        <input type="text" id="keywords" placeholder="科技,社会,财经">
+
+      <!-- 按钮组 -->
+      <div class="btn-group">
+        <button type="submit" class="save-btn">💾 保存配置</button>
+        <button type="button" class="test-btn" onclick="testGenerate()">🚀 测试生成</button>
       </div>
-      
-      <button type="submit" class="save-btn">保存配置</button>
-      <button type="button" class="test-btn" onclick="testGenerate()">测试生成</button>
+
+      <!-- 预览区域 -->
+      <div class="preview" id="preview" style="display: none;">
+        <h3>📋 配置预览</h3>
+        <div id="previewContent"></div>
+      </div>
     </form>
   </div>
 
@@ -437,6 +570,18 @@ app.get('/admin', (req, res) => {
           document.getElementById('apiKey').value = config.openai.apiKey || '';
           document.getElementById('model').value = config.openai.model || 'gpt-3.5-turbo';
           document.getElementById('keywords').value = config.keywords.join(',') || '';
+          
+          // 加载图片样式配置
+          document.getElementById('imageWidth').value = config.imageStyle.width || 800;
+          document.getElementById('imageHeight').value = config.imageStyle.height || 600;
+          document.getElementById('titleFontSize').value = config.imageStyle.titleFontSize || 28;
+          document.getElementById('textFontSize').value = config.imageStyle.fontSize || 16;
+          document.getElementById('backgroundColor').value = config.imageStyle.backgroundColor || '#ffffff';
+          document.getElementById('titleColor').value = config.imageStyle.titleColor || '#333333';
+          document.getElementById('textColor').value = config.imageStyle.textColor || '#666666';
+          document.getElementById('mainTitle').value = config.imageStyle.mainTitle || '今日热榜新闻';
+          document.getElementById('backgroundImage').value = config.imageStyle.backgroundImage || '';
+          document.getElementById('logoImage').value = config.imageStyle.logoImage || '';
         }
       } catch (error) {
         showMessage('加载配置失败: ' + error.message, 'error');
@@ -468,11 +613,16 @@ app.get('/admin', (req, res) => {
         },
         keywords: keywords,
         imageStyle: {
-          width: 800,
-          fontSize: 16,
-          titleColor: '#333333',
-          textColor: '#666666',
-          backgroundColor: '#ffffff'
+          width: parseInt(document.getElementById('imageWidth').value) || 800,
+          height: parseInt(document.getElementById('imageHeight').value) || 600,
+          titleFontSize: parseInt(document.getElementById('titleFontSize').value) || 28,
+          fontSize: parseInt(document.getElementById('textFontSize').value) || 16,
+          titleColor: document.getElementById('titleColor').value || '#333333',
+          textColor: document.getElementById('textColor').value || '#666666',
+          backgroundColor: document.getElementById('backgroundColor').value || '#ffffff',
+          mainTitle: document.getElementById('mainTitle').value || '今日热榜新闻',
+          backgroundImage: document.getElementById('backgroundImage').value || '',
+          logoImage: document.getElementById('logoImage').value || ''
         }
       };
       
