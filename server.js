@@ -215,113 +215,151 @@ async function getNewsFromOpenAI(keywords) {
 }
 
 // 生成图片（使用Canvas生成PNG）
-async function generateImage(newsTitles, keywords) {
-  const today = new Date().toLocaleDateString('zh-CN');
-  
-  // 检查是否有canvas模块
-  let Canvas;
+async function generateNewsImage(newsTitles) {
   try {
-    Canvas = require('canvas');
-    console.log('✅ Canvas模块加载成功，将生成PNG图片');
-    console.log('Canvas版本:', Canvas.version);
-  } catch (error) {
-    console.log('❌ Canvas模块未安装，使用HTML生成');
-    console.log('错误详情:', error.message);
-    return generateHTMLImage(newsTitles, keywords);
-  }
-  
-  console.log('创建Canvas，尺寸:', config.imageStyle.width, 'x', config.imageStyle.height);
-  const canvas = Canvas.createCanvas(config.imageStyle.width, config.imageStyle.height);
-  const ctx = canvas.getContext('2d');
-  
-  console.log('设置背景色:', config.imageStyle.backgroundColor);
-  // 设置背景
-  ctx.fillStyle = config.imageStyle.backgroundColor;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  // 如果有背景图片，绘制背景图片
-  if (config.imageStyle.backgroundImage) {
-    try {
-      console.log('加载背景图片:', config.imageStyle.backgroundImage);
-      const backgroundImg = await Canvas.loadImage(config.imageStyle.backgroundImage);
-      ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-    } catch (error) {
-      console.log('背景图片加载失败，使用纯色背景:', error.message);
-    }
-  }
-  
-  // 设置字体 - 使用中文字体
-  ctx.font = `bold ${config.imageStyle.titleFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillStyle = config.imageStyle.titleColor;
-  ctx.textAlign = 'center';
-  
-  // 绘制主标题
-  ctx.fillText(config.imageStyle.mainTitle, canvas.width / 2, 50);
-  
-  // 绘制日期
-  ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillStyle = config.imageStyle.textColor;
-  ctx.fillText(today, canvas.width / 2, 80);
-  
-  // 绘制关键词
-  ctx.font = `${config.imageStyle.fontSize + 2}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillStyle = config.imageStyle.titleColor;
-  ctx.fillText(`关键词：${keywords.join('、')}`, canvas.width / 2, 110);
-  
-  // 绘制新闻列表 - 为插图预留右侧空间
-  ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillStyle = config.imageStyle.textColor;
-  ctx.textAlign = 'left';
-  
-  // 计算文字区域宽度，为插图预留空间
-  const textAreaWidth = canvas.width - 200; // 右侧预留200px给插图
-  const lineHeight = 30;
-  let y = 150;
-  
-  newsTitles.forEach((title, index) => {
-    const text = `${index + 1}. ${title}`;
+    console.log('3. 开始生成图片...');
     
-    // 检查文字是否超出区域宽度
-    const textWidth = ctx.measureText(text).width;
-    if (textWidth > textAreaWidth) {
-      // 如果文字太长，进行换行处理
-      const words = text.split('');
-      let currentLine = '';
-      let lineY = y;
+    // 检查Canvas模块是否可用
+    try {
+      const { createCanvas, loadImage, registerFont } = require('canvas');
+      console.log('✅ Canvas模块加载成功，将生成PNG图片');
+      console.log('Canvas版本:', require('canvas').version);
       
-      for (let i = 0; i < words.length; i++) {
-        const testLine = currentLine + words[i];
-        const testWidth = ctx.measureText(testLine).width;
-        
-        if (testWidth > textAreaWidth && currentLine.length > 0) {
-          ctx.fillText(currentLine, 30, lineY);
-          currentLine = words[i];
-          lineY += lineHeight;
-        } else {
-          currentLine = testLine;
+      // 从配置中获取图片样式
+      const imageStyle = config.imageStyle || {
+        width: 600,
+        height: 800,
+        titleFontSize: 28,
+        fontSize: 16,
+        titleColor: '#333333',
+        textColor: '#666666',
+        backgroundColor: '#ffffff',
+        mainTitle: '今日热点新闻',
+        backgroundImage: '',
+        logoImage: ''
+      };
+      
+      // 创建Canvas
+      const canvas = createCanvas(imageStyle.width, imageStyle.height);
+      const ctx = canvas.getContext('2d');
+      console.log(`创建Canvas，尺寸: ${imageStyle.width} x ${imageStyle.height}`);
+      
+      // 设置背景色
+      ctx.fillStyle = imageStyle.backgroundColor;
+      ctx.fillRect(0, 0, imageStyle.width, imageStyle.height);
+      console.log(`设置背景色: ${imageStyle.backgroundColor}`);
+      
+      // 如果有背景图，加载并绘制
+      if (imageStyle.backgroundImage) {
+        try {
+          console.log(`加载背景图片: ${imageStyle.backgroundImage}`);
+          const backgroundImage = await loadImage(imageStyle.backgroundImage);
+          ctx.drawImage(backgroundImage, 0, 0, imageStyle.width, imageStyle.height);
+        } catch (imgErr) {
+          console.error('背景图片加载失败:', imgErr.message);
         }
       }
       
-      if (currentLine.length > 0) {
-        ctx.fillText(currentLine, 30, lineY);
-        lineY += lineHeight;
+      // 设置字体
+      const titleFont = `bold ${imageStyle.titleFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", "DejaVu Sans", Arial, sans-serif`;
+      const normalFont = `${imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", "DejaVu Sans", Arial, sans-serif`;
+      
+      // 绘制主标题
+      ctx.font = titleFont;
+      ctx.fillStyle = imageStyle.titleColor;
+      ctx.textAlign = 'center';
+      ctx.fillText(imageStyle.mainTitle, imageStyle.width / 2, 50);
+      
+      // 绘制日期
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
+      ctx.font = `${imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", "DejaVu Sans", Arial, sans-serif`;
+      ctx.fillText(dateStr, imageStyle.width / 2, 80);
+      
+      // 绘制关键词
+      ctx.fillText(`关键词: ${config.keywords.join('、')}`, imageStyle.width / 2, 110);
+      
+      // 绘制分隔线
+      ctx.beginPath();
+      ctx.moveTo(50, 130);
+      ctx.lineTo(imageStyle.width - 50, 130);
+      ctx.strokeStyle = '#cccccc';
+      ctx.stroke();
+      
+      // 绘制新闻标题列表
+      ctx.font = normalFont;
+      ctx.fillStyle = imageStyle.textColor;
+      ctx.textAlign = 'left';
+      
+      // 绘制新闻标题前的提示文字
+      ctx.fillText(`以下是与 "${config.keywords.join('、')}" 相关的新闻标题:`, 60, 160);
+      
+      // 逐条绘制新闻标题
+      let y = 190;
+      for (let i = 0; i < newsTitles.length && i < 10; i++) {
+        let title = newsTitles[i];
+        
+        // 清理标题文本，移除JSON格式
+        if (typeof title === 'string') {
+          try {
+            // 尝试解析JSON字符串
+            if (title.includes('{"title":')) {
+              const match = title.match(/"title":\s*"([^"]+)"/);
+              if (match && match[1]) {
+                title = match[1];
+              }
+            }
+          } catch (e) {
+            // 解析失败，保持原样
+          }
+        }
+        
+        // 限制标题长度
+        if (title.length > 40) {
+          title = title.substring(0, 40) + '...';
+        }
+        
+        // 绘制序号和标题
+        ctx.fillText(`${i + 1}. ${title}`, 60, y);
+        y += 40; // 行距
       }
       
-      y = lineY + 10; // 额外间距
-    } else {
-      ctx.fillText(text, 30, y);
-      y += lineHeight;
+      // 如果有Logo图片，加载并绘制
+      if (imageStyle.logoImage) {
+        try {
+          const logoImage = await loadImage(imageStyle.logoImage);
+          const logoSize = 80;
+          ctx.drawImage(logoImage, imageStyle.width - logoSize - 20, imageStyle.height - logoSize - 20, logoSize, logoSize);
+        } catch (imgErr) {
+          console.error('Logo图片加载失败:', imgErr.message);
+        }
+      }
+      
+      // 保存图片
+      console.log('开始生成PNG图片...');
+      const fs = require('fs');
+      const path = require('path');
+      
+      // 确保目录存在
+      if (!fs.existsSync('public')) {
+        fs.mkdirSync('public');
+      }
+      
+      const buffer = canvas.toBuffer('image/png');
+      fs.writeFileSync(path.join('public', 'news-latest.png'), buffer);
+      console.log(`PNG图片生成完成，大小: ${buffer.length} 字节`);
+      console.log(`PNG图片已保存到 public/news-latest.png`);
+      
+      return 'news-latest.png';
+    } catch (canvasErr) {
+      console.error('Canvas模块加载失败，将生成HTML:', canvasErr.message);
+      // 如果Canvas不可用，回退到生成HTML
+      return generateNewsHTML(newsTitles);
     }
-  });
-  
-  console.log('开始生成PNG图片...');
-  // 保存为PNG
-  const buffer = canvas.toBuffer('image/png');
-  console.log('PNG图片生成完成，大小:', buffer.length, '字节');
-  fs.writeFileSync('public/news-latest.png', buffer);
-  console.log('PNG图片已保存到 public/news-latest.png');
-  
-  return 'news-latest.png';
+  } catch (error) {
+    console.error('生成图片失败:', error);
+    throw new Error('生成图片失败');
+  }
 }
 
 // 备用HTML生成方法
@@ -415,7 +453,7 @@ app.get('/api/news-image', async (req, res) => {
     
     // 生成图片
     console.log('3. 开始生成图片...');
-    const imagePath = await generateImage(newsTitles, config.keywords);
+    const imagePath = await generateNewsImage(newsTitles);
     console.log('4. 图片生成完成，路径:', imagePath);
     
     console.log('5. 返回响应...');
