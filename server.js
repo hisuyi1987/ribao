@@ -288,6 +288,14 @@ async function getNewsFromOpenAI(keywords) {
       });
       return fallbackLines.slice(0, 10);
     }
+    
+    // 提取自定义内容（如果有）
+    const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
+    if (customContentMatch && customContentMatch[1]) {
+      console.log('提取到自定义内容:', customContentMatch[1].trim());
+      // 将自定义内容存储到全局变量中，供图片生成时使用
+      global.customContent = customContentMatch[1].trim();
+    }
   } catch (error) {
     console.error('调用AI API失败:', error.message);
     console.error('错误详情:', error.response?.data || error);
@@ -394,6 +402,21 @@ async function generateImage(newsTitles, keywords) {
       y += lineHeight;
     }
   });
+  
+  // 绘制自定义内容（如果有）
+  if (global.customContent) {
+    y += 20; // 额外间距
+    ctx.font = `bold ${config.imageStyle.fontSize + 2}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+    ctx.fillStyle = '#1890ff';
+    ctx.fillText('自定义内容:', 30, y);
+    y += lineHeight;
+    ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+    ctx.fillStyle = '#ff6b35';
+    ctx.fillText(global.customContent, 30, y);
+    // 重置字体和颜色
+    ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+    ctx.fillStyle = config.imageStyle.textColor;
+  }
   
   // 绘制自定义内容（如果有）
   if (config.customSearchPrompt && config.customSearchPrompt.trim()) {
