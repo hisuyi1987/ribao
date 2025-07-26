@@ -155,26 +155,26 @@ function generateImage(newsTitles, keywords) {
   ctx.fillStyle = config.imageStyle.backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-  // 设置字体
-  ctx.font = 'bold 28px Microsoft YaHei';
+  // 设置字体 - 使用系统默认字体
+  ctx.font = 'bold 28px Arial, sans-serif';
   ctx.fillStyle = config.imageStyle.titleColor;
   ctx.textAlign = 'center';
   
   // 绘制标题
-  ctx.fillText('今日热榜新闻', canvas.width / 2, 50);
+  ctx.fillText('Today News Report', canvas.width / 2, 50);
   
   // 绘制日期
-  ctx.font = '16px Microsoft YaHei';
+  ctx.font = '16px Arial, sans-serif';
   ctx.fillStyle = config.imageStyle.textColor;
   ctx.fillText(today, canvas.width / 2, 80);
   
   // 绘制关键词
-  ctx.font = '18px Microsoft YaHei';
+  ctx.font = '18px Arial, sans-serif';
   ctx.fillStyle = config.imageStyle.titleColor;
-  ctx.fillText(`关键词：${keywords.join('、')}`, canvas.width / 2, 110);
+  ctx.fillText(`Keywords: ${keywords.join(', ')}`, canvas.width / 2, 110);
   
   // 绘制新闻列表
-  ctx.font = `${config.imageStyle.fontSize}px Microsoft YaHei`;
+  ctx.font = `${config.imageStyle.fontSize}px Arial, sans-serif`;
   ctx.fillStyle = config.imageStyle.textColor;
   ctx.textAlign = 'left';
   
