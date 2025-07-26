@@ -318,11 +318,7 @@ app.get('/admin', (req, res) => {
       
       <div class="form-group">
         <label>模型名称</label>
-        <select id="model">
-          <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-          <option value="gpt-4">GPT-4</option>
-          <option value="gpt-4-turbo">GPT-4 Turbo</option>
-        </select>
+        <input type="text" id="model" placeholder="输入模型名称，如：gpt-3.5-turbo、gpt-4、claude-3等">
       </div>
       
       <div class="form-group">
