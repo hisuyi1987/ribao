@@ -34,26 +34,40 @@ const defaultConfig = {
   imageStyle: {
     width: 600,
     height: 800,
+    
     // 主标题设置
     mainTitle: '今日摸鱼见闻',
     titleFontSize: 28,
     titleColor: '#333333',
     titleY: 50, // 主标题Y坐标位置
     
-    // 日期和关键词设置
+    // 日期设置
+    dateFontSize: 16,
+    dateColor: '#666666',
     dateY: 80, // 日期Y坐标位置
+    
+    // 关键词设置
+    keywordsFontSize: 18,
+    keywordsColor: '#333333',
     keywordsY: 110, // 关键词Y坐标位置
     
     // 正文设置
     fontSize: 16,
     textColor: '#666666',
-    textStartY: 190, // 正文起始Y坐标
-    lineHeight: 40, // 行高
-    textLeftPadding: 60, // 左侧内边距
+    textStartY: 150, // 正文起始Y坐标
+    lineHeight: 35, // 行高
+    textLeftPadding: 30, // 左侧内边距
     
     // 自定义内容设置
+    customContentFontSize: 16,
+    customContentColor: '#ff6b35',
     customContentY: 600, // 自定义内容Y坐标
+    
+    // 落款设置
+    footerFontSize: 14,
+    footerColor: '#999999',
     footerY: 750, // 落款Y坐标
+    footerX: 580, // 落款X坐标（右对齐）
     
     // 背景设置
     backgroundColor: '#ffffff',
@@ -383,17 +397,17 @@ async function generateImage(newsTitles, keywords) {
   ctx.textAlign = 'center';
   
   // 绘制主标题
-  ctx.fillText(config.imageStyle.mainTitle, canvas.width / 2, 50);
+  ctx.fillText(config.imageStyle.mainTitle, canvas.width / 2, config.imageStyle.titleY);
   
   // 绘制日期
-  ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillStyle = config.imageStyle.textColor;
-  ctx.fillText(today, canvas.width / 2, 80);
+  ctx.font = `${config.imageStyle.dateFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+  ctx.fillStyle = config.imageStyle.dateColor;
+  ctx.fillText(today, canvas.width / 2, config.imageStyle.dateY);
   
   // 绘制关键词
-  ctx.font = `${config.imageStyle.fontSize + 2}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillStyle = config.imageStyle.titleColor;
-  ctx.fillText(`关键词：${keywords.join('、')}`, canvas.width / 2, 110);
+  ctx.font = `${config.imageStyle.keywordsFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+  ctx.fillStyle = config.imageStyle.keywordsColor;
+  ctx.fillText(`关键词：${keywords.join('、')}`, canvas.width / 2, config.imageStyle.keywordsY);
   
   // 绘制新闻列表 - 为插图预留右侧空间
   ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
@@ -402,8 +416,8 @@ async function generateImage(newsTitles, keywords) {
   
   // 计算文字区域宽度，为插图预留空间
   const textAreaWidth = canvas.width - 200; // 右侧预留200px给插图
-  const lineHeight = 30;
-  let y = 150;
+  const lineHeight = config.imageStyle.lineHeight;
+  let y = config.imageStyle.textStartY;
   
   newsTitles.forEach((title, index) => {
     const text = `${index + 1}. ${title}`;
@@ -421,7 +435,7 @@ async function generateImage(newsTitles, keywords) {
         const testWidth = ctx.measureText(testLine).width;
         
         if (testWidth > textAreaWidth && currentLine.length > 0) {
-          ctx.fillText(currentLine, 30, lineY);
+          ctx.fillText(currentLine, config.imageStyle.textLeftPadding, lineY);
           currentLine = words[i];
           lineY += lineHeight;
         } else {
@@ -430,13 +444,13 @@ async function generateImage(newsTitles, keywords) {
       }
       
       if (currentLine.length > 0) {
-        ctx.fillText(currentLine, 30, lineY);
+        ctx.fillText(currentLine, config.imageStyle.textLeftPadding, lineY);
         lineY += lineHeight;
       }
       
       y = lineY + 10; // 额外间距
     } else {
-      ctx.fillText(text, 30, y);
+      ctx.fillText(text, config.imageStyle.textLeftPadding, y);
       y += lineHeight;
     }
   });
@@ -446,9 +460,9 @@ async function generateImage(newsTitles, keywords) {
   if (global.customContent) {
     console.log('✅ 开始绘制自定义内容:', global.customContent);
     y += 20; // 额外间距
-    ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-    ctx.fillStyle = '#ff6b35';
-    ctx.fillText(global.customContent, 30, y);
+    ctx.font = `${config.imageStyle.customContentFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+    ctx.fillStyle = config.imageStyle.customContentColor;
+    ctx.fillText(global.customContent, config.imageStyle.textLeftPadding, y);
     // 重置字体和颜色
     ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
     ctx.fillStyle = config.imageStyle.textColor;
@@ -467,10 +481,10 @@ async function generateImage(newsTitles, keywords) {
   console.log('检查落款文本:', config.footerText);
   if (config.footerText && config.footerText.trim()) {
     console.log('✅ 开始绘制落款:', config.footerText);
-    ctx.font = `${config.imageStyle.fontSize - 2}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-    ctx.fillStyle = '#999999';
+    ctx.font = `${config.imageStyle.footerFontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+    ctx.fillStyle = config.imageStyle.footerColor;
     ctx.textAlign = 'right';
-    ctx.fillText(config.footerText, canvas.width - 20, canvas.height - 20);
+    ctx.fillText(config.footerText, config.imageStyle.footerX, config.imageStyle.footerY);
     console.log('✅ 落款绘制完成');
   } else {
     console.log('❌ 没有落款文本需要绘制');
@@ -783,46 +797,145 @@ app.get('/admin', (req, res) => {
       <div class="section">
         <div class="section-title">🎨 图片样式配置</div>
         
+        <!-- 基础尺寸设置 -->
         <div class="form-row">
           <div class="form-col">
             <label>图片宽度 (px)</label>
-            <input type="number" id="imageWidth" placeholder="800" min="400" max="1200">
+            <input type="number" id="imageWidth" placeholder="600" min="400" max="1200">
           </div>
           <div class="form-col">
             <label>图片高度 (px)</label>
-            <input type="number" id="imageHeight" placeholder="600" min="400" max="1000">
+            <input type="number" id="imageHeight" placeholder="800" min="400" max="1200">
+          </div>
+        </div>
+
+        <!-- 主标题设置 -->
+        <div class="form-row">
+          <div class="form-col">
+            <label>主标题文字</label>
+            <input type="text" id="mainTitle" placeholder="今日摸鱼见闻" value="今日摸鱼见闻">
+          </div>
+          <div class="form-col">
+            <label>主标题字体大小 (px)</label>
+            <input type="number" id="titleFontSize" placeholder="28" min="16" max="48">
+          </div>
+          <div class="form-col">
+            <label>主标题颜色</label>
+            <input type="color" id="titleColor" class="color-picker" value="#333333">
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-col">
-            <label>标题字体大小 (px)</label>
-            <input type="number" id="titleFontSize" placeholder="28" min="16" max="48">
+            <label>主标题Y坐标</label>
+            <input type="number" id="titleY" placeholder="50" min="20" max="200">
           </div>
+        </div>
+
+        <!-- 日期设置 -->
+        <div class="form-row">
+          <div class="form-col">
+            <label>日期字体大小 (px)</label>
+            <input type="number" id="dateFontSize" placeholder="16" min="12" max="24">
+          </div>
+          <div class="form-col">
+            <label>日期颜色</label>
+            <input type="color" id="dateColor" class="color-picker" value="#666666">
+          </div>
+          <div class="form-col">
+            <label>日期Y坐标</label>
+            <input type="number" id="dateY" placeholder="80" min="40" max="200">
+          </div>
+        </div>
+
+        <!-- 关键词设置 -->
+        <div class="form-row">
+          <div class="form-col">
+            <label>关键词字体大小 (px)</label>
+            <input type="number" id="keywordsFontSize" placeholder="18" min="12" max="24">
+          </div>
+          <div class="form-col">
+            <label>关键词颜色</label>
+            <input type="color" id="keywordsColor" class="color-picker" value="#333333">
+          </div>
+          <div class="form-col">
+            <label>关键词Y坐标</label>
+            <input type="number" id="keywordsY" placeholder="110" min="60" max="250">
+          </div>
+        </div>
+
+        <!-- 正文设置 -->
+        <div class="form-row">
           <div class="form-col">
             <label>正文字体大小 (px)</label>
             <input type="number" id="textFontSize" placeholder="16" min="12" max="24">
           </div>
+          <div class="form-col">
+            <label>正文颜色</label>
+            <input type="color" id="textColor" class="color-picker" value="#666666">
+          </div>
+          <div class="form-col">
+            <label>行高 (px)</label>
+            <input type="number" id="lineHeight" placeholder="35" min="20" max="60">
+          </div>
         </div>
 
+        <div class="form-row">
+          <div class="form-col">
+            <label>正文起始Y坐标</label>
+            <input type="number" id="textStartY" placeholder="150" min="100" max="300">
+          </div>
+          <div class="form-col">
+            <label>左侧内边距 (px)</label>
+            <input type="number" id="textLeftPadding" placeholder="30" min="10" max="100">
+          </div>
+        </div>
+
+        <!-- 自定义内容设置 -->
+        <div class="form-row">
+          <div class="form-col">
+            <label>自定义内容字体大小 (px)</label>
+            <input type="number" id="customContentFontSize" placeholder="16" min="12" max="24">
+          </div>
+          <div class="form-col">
+            <label>自定义内容颜色</label>
+            <input type="color" id="customContentColor" class="color-picker" value="#ff6b35">
+          </div>
+          <div class="form-col">
+            <label>自定义内容Y坐标</label>
+            <input type="number" id="customContentY" placeholder="600" min="400" max="800">
+          </div>
+        </div>
+
+        <!-- 落款设置 -->
+        <div class="form-row">
+          <div class="form-col">
+            <label>落款字体大小 (px)</label>
+            <input type="number" id="footerFontSize" placeholder="14" min="10" max="20">
+          </div>
+          <div class="form-col">
+            <label>落款颜色</label>
+            <input type="color" id="footerColor" class="color-picker" value="#999999">
+          </div>
+          <div class="form-col">
+            <label>落款X坐标</label>
+            <input type="number" id="footerX" placeholder="580" min="400" max="600">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <label>落款Y坐标</label>
+            <input type="number" id="footerY" placeholder="750" min="600" max="800">
+          </div>
+        </div>
+
+        <!-- 背景设置 -->
         <div class="form-row">
           <div class="form-col">
             <label>背景颜色</label>
             <input type="color" id="backgroundColor" class="color-picker" value="#ffffff">
           </div>
-          <div class="form-col">
-            <label>标题颜色</label>
-            <input type="color" id="titleColor" class="color-picker" value="#333333">
-          </div>
-          <div class="form-col">
-            <label>文字颜色</label>
-            <input type="color" id="textColor" class="color-picker" value="#666666">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>主标题文字</label>
-          <input type="text" id="mainTitle" placeholder="今日热榜新闻" value="今日热榜新闻">
         </div>
 
         <div class="form-group">
@@ -867,14 +980,37 @@ app.get('/admin', (req, res) => {
           document.getElementById('footerText').value = config.footerText || '';
           
           // 加载图片样式配置
-          document.getElementById('imageWidth').value = config.imageStyle.width || 800;
-          document.getElementById('imageHeight').value = config.imageStyle.height || 600;
+          document.getElementById('imageWidth').value = config.imageStyle.width || 600;
+          document.getElementById('imageHeight').value = config.imageStyle.height || 800;
+          document.getElementById('mainTitle').value = config.imageStyle.mainTitle || '今日摸鱼见闻';
           document.getElementById('titleFontSize').value = config.imageStyle.titleFontSize || 28;
-          document.getElementById('textFontSize').value = config.imageStyle.fontSize || 16;
-          document.getElementById('backgroundColor').value = config.imageStyle.backgroundColor || '#ffffff';
           document.getElementById('titleColor').value = config.imageStyle.titleColor || '#333333';
+          document.getElementById('titleY').value = config.imageStyle.titleY || 50;
+          
+          document.getElementById('dateFontSize').value = config.imageStyle.dateFontSize || 16;
+          document.getElementById('dateColor').value = config.imageStyle.dateColor || '#666666';
+          document.getElementById('dateY').value = config.imageStyle.dateY || 80;
+          
+          document.getElementById('keywordsFontSize').value = config.imageStyle.keywordsFontSize || 18;
+          document.getElementById('keywordsColor').value = config.imageStyle.keywordsColor || '#333333';
+          document.getElementById('keywordsY').value = config.imageStyle.keywordsY || 110;
+          
+          document.getElementById('textFontSize').value = config.imageStyle.fontSize || 16;
           document.getElementById('textColor').value = config.imageStyle.textColor || '#666666';
-          document.getElementById('mainTitle').value = config.imageStyle.mainTitle || '今日热榜新闻';
+          document.getElementById('lineHeight').value = config.imageStyle.lineHeight || 35;
+          document.getElementById('textStartY').value = config.imageStyle.textStartY || 150;
+          document.getElementById('textLeftPadding').value = config.imageStyle.textLeftPadding || 30;
+          
+          document.getElementById('customContentFontSize').value = config.imageStyle.customContentFontSize || 16;
+          document.getElementById('customContentColor').value = config.imageStyle.customContentColor || '#ff6b35';
+          document.getElementById('customContentY').value = config.imageStyle.customContentY || 600;
+          
+          document.getElementById('footerFontSize').value = config.imageStyle.footerFontSize || 14;
+          document.getElementById('footerColor').value = config.imageStyle.footerColor || '#999999';
+          document.getElementById('footerX').value = config.imageStyle.footerX || 580;
+          document.getElementById('footerY').value = config.imageStyle.footerY || 750;
+          
+          document.getElementById('backgroundColor').value = config.imageStyle.backgroundColor || '#ffffff';
           document.getElementById('backgroundImage').value = config.imageStyle.backgroundImage || '';
           document.getElementById('logoImage').value = config.imageStyle.logoImage || '';
           document.getElementById('useMockData').checked = config.useMockData || false;
@@ -912,14 +1048,38 @@ app.get('/admin', (req, res) => {
         footerText: document.getElementById('footerText').value,
         useMockData: document.getElementById('useMockData').checked,
         imageStyle: {
-          width: parseInt(document.getElementById('imageWidth').value) || 800,
-          height: parseInt(document.getElementById('imageHeight').value) || 600,
+          width: parseInt(document.getElementById('imageWidth').value) || 600,
+          height: parseInt(document.getElementById('imageHeight').value) || 800,
+          
+          mainTitle: document.getElementById('mainTitle').value || '今日摸鱼见闻',
           titleFontSize: parseInt(document.getElementById('titleFontSize').value) || 28,
-          fontSize: parseInt(document.getElementById('textFontSize').value) || 16,
           titleColor: document.getElementById('titleColor').value || '#333333',
+          titleY: parseInt(document.getElementById('titleY').value) || 50,
+          
+          dateFontSize: parseInt(document.getElementById('dateFontSize').value) || 16,
+          dateColor: document.getElementById('dateColor').value || '#666666',
+          dateY: parseInt(document.getElementById('dateY').value) || 80,
+          
+          keywordsFontSize: parseInt(document.getElementById('keywordsFontSize').value) || 18,
+          keywordsColor: document.getElementById('keywordsColor').value || '#333333',
+          keywordsY: parseInt(document.getElementById('keywordsY').value) || 110,
+          
+          fontSize: parseInt(document.getElementById('textFontSize').value) || 16,
           textColor: document.getElementById('textColor').value || '#666666',
+          lineHeight: parseInt(document.getElementById('lineHeight').value) || 35,
+          textStartY: parseInt(document.getElementById('textStartY').value) || 150,
+          textLeftPadding: parseInt(document.getElementById('textLeftPadding').value) || 30,
+          
+          customContentFontSize: parseInt(document.getElementById('customContentFontSize').value) || 16,
+          customContentColor: document.getElementById('customContentColor').value || '#ff6b35',
+          customContentY: parseInt(document.getElementById('customContentY').value) || 600,
+          
+          footerFontSize: parseInt(document.getElementById('footerFontSize').value) || 14,
+          footerColor: document.getElementById('footerColor').value || '#999999',
+          footerX: parseInt(document.getElementById('footerX').value) || 580,
+          footerY: parseInt(document.getElementById('footerY').value) || 750,
+          
           backgroundColor: document.getElementById('backgroundColor').value || '#ffffff',
-          mainTitle: document.getElementById('mainTitle').value || '今日热榜新闻',
           backgroundImage: document.getElementById('backgroundImage').value || '',
           logoImage: document.getElementById('logoImage').value || ''
         }
