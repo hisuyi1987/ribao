@@ -134,26 +134,22 @@ async function getNewsFromOpenAI(keywords) {
     };
     let apiUrl = config.openai.apiUrl; // 默认使用配置的URL
     
-    if (config.openai.apiUrl.includes('poloai.top')) {
-      // poloai.top 联网搜索格式
+    if (config.openai.apiUrl.includes('aihubmix.com')) {
+      // aihubmix.com format
       requestData = {
         model: config.openai.model,
-        tools: [
+        messages: [
           {
-            type: "web_search_preview"
+            role: "user",
+            content: prompt
           }
         ],
-        input: prompt,
         max_tokens: 1000,
-        temperature: 0.7
+        web_search_options: {}
       };
       headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
-      
-      // 使用联网搜索端点
-      apiUrl = config.openai.apiUrl.replace('/v1/chat/completions', '/v1/responses');
-      console.log('   - 使用联网搜索端点:', apiUrl);
     } else {
-      // 标准OpenAI格式
+      // Standard OpenAI format
       requestData = {
         model: config.openai.model,
         messages: [
