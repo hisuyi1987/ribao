@@ -69,6 +69,10 @@ let config = loadConfig();
 // 调用AI API获取新闻
 async function getNewsFromOpenAI(keywords) {
   try {
+    console.log('   - 准备调用AI API，关键词:', keywords);
+    console.log('   - API地址:', config.openai.apiUrl);
+    console.log('   - 模型:', config.openai.model);
+    
     const prompt = `请搜索今天与以下关键词相关的新闻，返回5-10条新闻标题，格式为JSON数组：
 关键词：${keywords.join('、')}
 
@@ -77,6 +81,7 @@ async function getNewsFromOpenAI(keywords) {
 2. 每条标题不超过50字
 3. 返回格式：[{"title": "新闻标题1"}, {"title": "新闻标题2"}]`;
 
+    console.log('   - 发送请求到AI API...');
     // 适配 aihubmix.com API格式
     const response = await axios.post(config.openai.apiUrl, {
       model: config.openai.model,
@@ -134,15 +139,18 @@ function generateImage(newsTitles, keywords) {
   try {
     Canvas = require('canvas');
     console.log('✅ Canvas模块加载成功，将生成PNG图片');
+    console.log('Canvas版本:', Canvas.version);
   } catch (error) {
     console.log('❌ Canvas模块未安装，使用HTML生成');
     console.log('错误详情:', error.message);
     return generateHTMLImage(newsTitles, keywords);
   }
   
+  console.log('创建Canvas，尺寸:', config.imageStyle.width, 'x 600');
   const canvas = Canvas.createCanvas(config.imageStyle.width, 600);
   const ctx = canvas.getContext('2d');
   
+  console.log('设置背景色:', config.imageStyle.backgroundColor);
   // 设置背景
   ctx.fillStyle = config.imageStyle.backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -177,9 +185,12 @@ function generateImage(newsTitles, keywords) {
     y += 30;
   });
   
+  console.log('开始生成PNG图片...');
   // 保存为PNG
   const buffer = canvas.toBuffer('image/png');
+  console.log('PNG图片生成完成，大小:', buffer.length, '字节');
   fs.writeFileSync('public/news-latest.png', buffer);
+  console.log('PNG图片已保存到 public/news-latest.png');
   
   return 'news-latest.png';
 }
@@ -264,14 +275,21 @@ function generateHTMLImage(newsTitles, keywords) {
 // API路由：生成新闻图片
 app.get('/api/news-image', async (req, res) => {
   try {
-    console.log('收到新闻图片生成请求');
+    console.log('=== 开始处理新闻图片生成请求 ===');
+    console.log('当前配置:', JSON.stringify(config, null, 2));
     
     // 获取新闻
+    console.log('1. 开始调用AI API获取新闻...');
     const newsTitles = await getNewsFromOpenAI(config.keywords);
+    console.log('2. AI API调用完成，获取到', newsTitles.length, '条新闻');
+    console.log('新闻标题:', newsTitles);
     
     // 生成图片
+    console.log('3. 开始生成图片...');
     const imagePath = generateImage(newsTitles, config.keywords);
+    console.log('4. 图片生成完成，路径:', imagePath);
     
+    console.log('5. 返回响应...');
     res.json({
       success: true,
       message: '新闻图片生成成功',
@@ -281,8 +299,10 @@ app.get('/api/news-image', async (req, res) => {
         keywords: config.keywords
       }
     });
+    console.log('=== 新闻图片生成请求处理完成 ===');
   } catch (error) {
-    console.error('生成新闻图片失败:', error.message);
+    console.error('❌ 生成新闻图片失败:', error.message);
+    console.error('错误堆栈:', error.stack);
     res.status(500).json({
       success: false,
       message: error.message
