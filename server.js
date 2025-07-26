@@ -134,12 +134,18 @@ async function getNewsFromOpenAI(keywords) {
     };
     
     if (config.openai.apiUrl.includes('poloai.top')) {
-      // poloai.top API格式
+      // poloai.top 使用标准OpenAI格式
       requestData = {
-        input: prompt,
         model: config.openai.model,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
         max_tokens: 1000,
-        temperature: 0.7
+        temperature: 0.7,
+        stream: false
       };
       headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
     } else {
