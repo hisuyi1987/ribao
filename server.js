@@ -85,41 +85,20 @@ function saveConfig(config) {
 // 获取当前配置
 let config = loadConfig();
 
-// 模拟新闻数据
-function getMockNewsData(keywords) {
-  const mockData = {
-    '科技': [
-      '2025世界人工智能大会在沪开幕，聚焦AI前沿技术与产业趋势',
-      '《中国智·惠世界(2025)》案例集发布，展现AI国际合作成果',
-      '人工智能大会聚焦AI产业链创新，机器人现场表演',
-      '高校加速布局未来赛道，智能+专业成新趋势',
-      '得物人工智能查验系统获世界人工智能大会最高奖项"SAIL奖"'
-    ],
-    '社会': [
-      '财政部：上半年财政运行总体平稳，社保就业支出增长9.2%',
-      '保民生、促消费，财政政策有力度有温度',
-      '北京希望"贡献中国智慧"，倡议成立世界人工智能合作组织',
-      '中国倡议成立世界人工智能合作组织，贡献中国智慧',
-      '7月26日五件财经大事抢先看'
-    ],
-    '财经': [
-      '以太坊ETF资金净流入超越比特币，或成币圈新主导',
-      '美股盘前：英特尔大跌8.7%，金价大跌美元走强',
-      '净利润大跌22%！LVMH迎来"风浪时刻"',
-      '2025年07月26日第4版：财经新闻 - 上海证券报',
-      '喜娜AI速递：今日财经热点要闻回顾'
-    ]
-  };
-  
-  const allNews = [];
-  keywords.forEach(keyword => {
-    if (mockData[keyword]) {
-      allNews.push(...mockData[keyword]);
-    }
-  });
-  
-  // 返回10条新闻
-  return allNews.slice(0, 10);
+// 添加模拟数据函数
+function getMockNewsData() {
+  return [
+    "微软发布 OpenAI 竞争对手大模型 MAI，性能超越 GPT-4",
+    "阿里妈妈联合国家图书馆文创打造AI创意短片",
+    "川崎重工展示四足仿生机器人：采用氢燃料电池动力系统",
+    "Meta计划在威斯康星州投资10亿美元建设人工智能数据中心",
+    "音乐AI专业如何"智"启未来",
+    "OpenAI被嘲要求投资者排他性支持，引发业界争议",
+    "英伟达CEO黄仁勋个人身价超英特尔市值达1092亿美元",
+    "加州州长否决人工智能安全法案SB 1047",
+    "科技部：中国已建成超算中心超过20个，算力规模全球领先",
+    "苹果AI功能Apple Intelligence将于10月推送，支持中文"
+  ];
 }
 
 // 调用AI API获取新闻
@@ -132,7 +111,7 @@ async function getNewsFromOpenAI(keywords) {
     // 检查是否使用模拟数据模式
     if (config.useMockData) {
       console.log('   - 使用模拟数据模式');
-      return getMockNewsData(keywords);
+      return getMockNewsData();
     }
     
     const prompt = `请搜索今天与以下关键词相关的新闻，返回5-10条新闻标题，格式为JSON数组：
@@ -322,9 +301,9 @@ async function generateNewsImage(newsTitles) {
           }
         }
         
-        // 限制标题长度
-        if (title.length > 40) {
-          title = title.substring(0, 40) + '...';
+        // 限制标题长度为25个字符
+        if (title.length > 25) {
+          title = title.substring(0, 25) + '...';
         }
         
         // 绘制序号和标题
