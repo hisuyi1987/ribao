@@ -241,9 +241,12 @@ async function getNewsFromOpenAI(keywords) {
       // 提取自定义内容（如果有）
       const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
       if (customContentMatch && customContentMatch[1]) {
-        console.log('提取到自定义内容:', customContentMatch[1].trim());
+        console.log('✅ 提取到自定义内容:', customContentMatch[1].trim());
         // 将自定义内容存储到全局变量中，供图片生成时使用
         global.customContent = customContentMatch[1].trim();
+      } else {
+        console.log('❌ 未找到自定义内容标签');
+        global.customContent = null;
       }
       
       return newsData.map(item => item.title);
@@ -260,9 +263,12 @@ async function getNewsFromOpenAI(keywords) {
           // 提取自定义内容（如果有）
           const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
           if (customContentMatch && customContentMatch[1]) {
-            console.log('提取到自定义内容:', customContentMatch[1].trim());
+            console.log('✅ 提取到自定义内容:', customContentMatch[1].trim());
             // 将自定义内容存储到全局变量中，供图片生成时使用
             global.customContent = customContentMatch[1].trim();
+          } else {
+            console.log('❌ 未找到自定义内容标签');
+            global.customContent = null;
           }
           
           return newsData.map(item => item.title);
@@ -296,9 +302,12 @@ async function getNewsFromOpenAI(keywords) {
         // 提取自定义内容（如果有）
         const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
         if (customContentMatch && customContentMatch[1]) {
-          console.log('提取到自定义内容:', customContentMatch[1].trim());
+          console.log('✅ 提取到自定义内容:', customContentMatch[1].trim());
           // 将自定义内容存储到全局变量中，供图片生成时使用
           global.customContent = customContentMatch[1].trim();
+        } else {
+          console.log('❌ 未找到自定义内容标签');
+          global.customContent = null;
         }
         return titles;
       }
@@ -315,9 +324,12 @@ async function getNewsFromOpenAI(keywords) {
       // 提取自定义内容（如果有）
       const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
       if (customContentMatch && customContentMatch[1]) {
-        console.log('提取到自定义内容:', customContentMatch[1].trim());
+        console.log('✅ 提取到自定义内容:', customContentMatch[1].trim());
         // 将自定义内容存储到全局变量中，供图片生成时使用
         global.customContent = customContentMatch[1].trim();
+      } else {
+        console.log('❌ 未找到自定义内容标签');
+        global.customContent = null;
       }
       
       return fallbackLines.slice(0, 10);
@@ -430,7 +442,9 @@ async function generateImage(newsTitles, keywords) {
   });
   
   // 绘制自定义内容（如果有）
+  console.log('检查自定义内容:', global.customContent);
   if (global.customContent) {
+    console.log('✅ 开始绘制自定义内容:', global.customContent);
     y += 20; // 额外间距
     ctx.font = `bold ${config.imageStyle.fontSize + 2}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
     ctx.fillStyle = '#1890ff';
@@ -442,6 +456,9 @@ async function generateImage(newsTitles, keywords) {
     // 重置字体和颜色
     ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
     ctx.fillStyle = config.imageStyle.textColor;
+    console.log('✅ 自定义内容绘制完成');
+  } else {
+    console.log('❌ 没有自定义内容需要绘制');
   }
   
   // 绘制自定义内容（如果有）
