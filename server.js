@@ -134,20 +134,23 @@ async function getNewsFromOpenAI(keywords) {
     };
     
     if (config.openai.apiUrl.includes('poloai.top')) {
-      // poloai.top 使用标准OpenAI格式
+      // poloai.top 联网搜索格式
       requestData = {
         model: config.openai.model,
-        messages: [
+        tools: [
           {
-            role: "user",
-            content: prompt
+            type: "web_search_preview"
           }
         ],
+        input: prompt,
         max_tokens: 1000,
-        temperature: 0.7,
-        stream: false
+        temperature: 0.7
       };
       headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
+      
+      // 使用联网搜索端点
+      let apiUrl = config.openai.apiUrl.replace('/v1/chat/completions', '/v1/responses');
+      console.log('   - 使用联网搜索端点:', apiUrl);
     } else {
       // 标准OpenAI格式
       requestData = {
@@ -165,7 +168,7 @@ async function getNewsFromOpenAI(keywords) {
       headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
     }
     
-    const response = await axios.post(config.openai.apiUrl, requestData, { headers });
+    const response = await axios.post(apiUrl || config.openai.apiUrl, requestData, { headers });
 
     // 适配不同的响应格式
     let content;
@@ -190,9 +193,22 @@ async function getNewsFromOpenAI(keywords) {
       const newsData = JSON.parse(content);
       return newsData.map(item => item.title);
     } catch (parseError) {
-      // 如果JSON解析失败，尝试提取标题
-      const titles = content.match(/[""]([^""]+)[""]/g) || [];
-      return titles.map(title => title.replace(/[""]/g, ''));
+      console.log('JSON解析失败，尝试其他方式提取新闻标题...');
+      
+      // 如果JSON解析失败，尝试从HTML或文本中提取标题
+      if (content.includes('<') && content.includes('>')) {
+        // 如果是HTML格式，尝试提取文本内容
+        console.log('检测到HTML格式，尝试提取文本...');
+        const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        
+        // 尝试从文本中提取新闻标题
+        const lines = textContent.split(/[。！？\n]/).filter(line => line.trim().length > 5);
+        return lines.slice(0, 10); // 返回前10行作为新闻标题
+      } else {
+        // 如果是纯文本，按行分割
+        const lines = content.split(/[。！？\n]/).filter(line => line.trim().length > 5);
+        return lines.slice(0, 10);
+      }
     }
   } catch (error) {
     console.error('调用AI API失败:', error.message);
@@ -255,16 +271,50 @@ async function generateImage(newsTitles, keywords) {
   ctx.fillStyle = config.imageStyle.titleColor;
   ctx.fillText(`关键词：${keywords.join('、')}`, canvas.width / 2, 110);
   
-  // 绘制新闻列表
+  // 绘制新闻列表 - 为插图预留右侧空间
   ctx.font = `${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
   ctx.fillStyle = config.imageStyle.textColor;
   ctx.textAlign = 'left';
   
+  // 计算文字区域宽度，为插图预留空间
+  const textAreaWidth = canvas.width - 200; // 右侧预留200px给插图
+  const lineHeight = 30;
   let y = 150;
+  
   newsTitles.forEach((title, index) => {
     const text = `${index + 1}. ${title}`;
-    ctx.fillText(text, 30, y);
-    y += 30;
+    
+    // 检查文字是否超出区域宽度
+    const textWidth = ctx.measureText(text).width;
+    if (textWidth > textAreaWidth) {
+      // 如果文字太长，进行换行处理
+      const words = text.split('');
+      let currentLine = '';
+      let lineY = y;
+      
+      for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine + words[i];
+        const testWidth = ctx.measureText(testLine).width;
+        
+        if (testWidth > textAreaWidth && currentLine.length > 0) {
+          ctx.fillText(currentLine, 30, lineY);
+          currentLine = words[i];
+          lineY += lineHeight;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      
+      if (currentLine.length > 0) {
+        ctx.fillText(currentLine, 30, lineY);
+        lineY += lineHeight;
+      }
+      
+      y = lineY + 10; // 额外间距
+    } else {
+      ctx.fillText(text, 30, y);
+      y += lineHeight;
+    }
   });
   
   console.log('开始生成PNG图片...');
