@@ -21,9 +21,9 @@ const IMAGE_PATH = 'public/news-latest.png';
 // 默认配置
 const defaultConfig = {
   openai: {
-    apiUrl: 'https://api.openai.com/v1/chat/completions',
+    apiUrl: 'https://aihubmix.com/v1/chat/completions',
     apiKey: '',
-    model: 'gpt-3.5-turbo'
+    model: 'gemini-2.5-flash-search'
   },
   keywords: ['科技', '社会', '财经'],
   imageStyle: {
@@ -66,7 +66,7 @@ function saveConfig(config) {
 // 获取当前配置
 let config = loadConfig();
 
-// 调用OpenAI API获取新闻
+// 调用AI API获取新闻
 async function getNewsFromOpenAI(keywords) {
   try {
     const prompt = `请搜索今天与以下关键词相关的新闻，返回5-10条新闻标题，格式为JSON数组：
@@ -77,6 +77,7 @@ async function getNewsFromOpenAI(keywords) {
 2. 每条标题不超过50字
 3. 返回格式：[{"title": "新闻标题1"}, {"title": "新闻标题2"}]`;
 
+    // 适配 aihubmix.com API格式
     const response = await axios.post(config.openai.apiUrl, {
       model: config.openai.model,
       messages: [
@@ -86,15 +87,27 @@ async function getNewsFromOpenAI(keywords) {
         }
       ],
       max_tokens: 1000,
-      temperature: 0.7
+      temperature: 0.7,
+      stream: false
     }, {
       headers: {
         'Authorization': `Bearer ${config.openai.apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
     });
 
-    const content = response.data.choices[0].message.content;
+    // 适配不同的响应格式
+    let content;
+    if (response.data.choices && response.data.choices[0]) {
+      content = response.data.choices[0].message.content;
+    } else if (response.data.content) {
+      content = response.data.content;
+    } else if (response.data.text) {
+      content = response.data.text;
+    } else {
+      content = JSON.stringify(response.data);
+    }
     
     // 尝试解析JSON
     try {
@@ -106,7 +119,8 @@ async function getNewsFromOpenAI(keywords) {
       return titles.map(title => title.replace(/[""]/g, ''));
     }
   } catch (error) {
-    console.error('调用OpenAI API失败:', error.message);
+    console.error('调用AI API失败:', error.message);
+    console.error('错误详情:', error.response?.data || error);
     throw new Error('获取新闻失败');
   }
 }
