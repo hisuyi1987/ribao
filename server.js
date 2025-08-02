@@ -857,32 +857,7 @@ app.get('/admin', requireAuth, (req, res) => {
       margin-top: 30px;
     }
     
-    /* 消息提示样式 */
-    .message {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 6px;
-      color: white;
-      font-weight: bold;
-      z-index: 1000;
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    .message.show {
-      transform: translateX(0);
-    }
-    .message.success {
-      background: #52c41a;
-    }
-    .message.error {
-      background: #ff4d4f;
-    }
-    .message.info {
-      background: #1890ff;
-    }
+
     .preview {
       margin-top: 20px;
       padding: 15px;
@@ -1243,36 +1218,11 @@ app.get('/admin', requireAuth, (req, res) => {
           }
         }
       } catch (error) {
-        showMessage('加载配置失败: ' + error.message, 'error');
+        console.error('加载配置失败: ' + error.message);
       }
     }
     
-    // 显示消息
-    function showMessage(message, type) {
-      let messageDiv = document.getElementById('message');
-      if (!messageDiv) {
-        messageDiv = document.createElement('div');
-        messageDiv.id = 'message';
-        document.body.appendChild(messageDiv);
-      }
-      
-      messageDiv.className = \`message \${type}\`;
-      messageDiv.textContent = message;
-      
-      // 显示动画
-      setTimeout(() => {
-        messageDiv.classList.add('show');
-      }, 100);
-      
-      // 自动隐藏
-      setTimeout(() => {
-        messageDiv.classList.remove('show');
-        setTimeout(() => {
-          messageDiv.textContent = '';
-          messageDiv.className = '';
-        }, 300);
-      }, 3000);
-    }
+
     
     // 保存配置
     document.getElementById('configForm').addEventListener('submit', async (e) => {
@@ -1354,17 +1304,16 @@ app.get('/admin', requireAuth, (req, res) => {
         
         const data = await response.json();
         if (data.success) {
-          showMessage('配置保存成功！', 'success');
           // 添加成功动画
           saveBtn.style.background = '#52c41a';
           setTimeout(() => {
             saveBtn.style.background = '';
           }, 1000);
         } else {
-          showMessage('配置保存失败: ' + data.message, 'error');
+          console.error('配置保存失败: ' + data.message);
         }
       } catch (error) {
-        showMessage('配置保存失败: ' + error.message, 'error');
+        console.error('配置保存失败: ' + error.message);
       } finally {
         // 恢复按钮状态
         saveBtn.textContent = originalText;
@@ -1382,12 +1331,10 @@ app.get('/admin', requireAuth, (req, res) => {
       testBtn.disabled = true;
       
       try {
-        showMessage('正在生成新闻图片...', 'success');
         const response = await fetch('/api/news-image');
         const data = await response.json();
         
         if (data.success) {
-          showMessage('新闻图片生成成功！', 'success');
           // 添加成功动画
           testBtn.style.background = '#52c41a';
           setTimeout(() => {
@@ -1395,10 +1342,10 @@ app.get('/admin', requireAuth, (req, res) => {
           }, 1000);
           window.open(data.data.imageUrl, '_blank');
         } else {
-          showMessage('生成失败: ' + data.message, 'error');
+          console.error('生成失败: ' + data.message);
         }
       } catch (error) {
-        showMessage('生成失败: ' + error.message, 'error');
+        console.error('生成失败: ' + error.message);
       } finally {
         // 恢复按钮状态
         testBtn.textContent = originalText;
@@ -1416,12 +1363,10 @@ app.get('/admin', requireAuth, (req, res) => {
       updateBtn.disabled = true;
       
       try {
-        showMessage('正在立即更新日报内容...', 'success');
         const response = await fetch('/api/update-news');
         const data = await response.json();
         
         if (data.success) {
-          showMessage('日报内容更新成功！', 'success');
           // 添加成功动画
           updateBtn.style.background = '#52c41a';
           setTimeout(() => {
@@ -1432,10 +1377,10 @@ app.get('/admin', requireAuth, (req, res) => {
             loadConfig();
           }, 1000);
         } else {
-          showMessage('更新失败: ' + data.message, 'error');
+          console.error('更新失败: ' + data.message);
         }
       } catch (error) {
-        showMessage('更新失败: ' + error.message, 'error');
+        console.error('更新失败: ' + error.message);
       } finally {
         // 恢复按钮状态
         updateBtn.textContent = originalText;
