@@ -122,30 +122,37 @@ function startAutoUpdate() {
     clearInterval(updateTimer);
   }
   
-  if (config.autoUpdate && config.autoUpdate.enabled) {
-    console.log(`定时更新已启动，每天 ${config.autoUpdate.hour}:00 更新`);
+  // 重新加载最新配置
+  const currentConfig = loadConfig();
+  
+  if (currentConfig.autoUpdate && currentConfig.autoUpdate.enabled) {
+    console.log(`定时更新已启动，每天 ${currentConfig.autoUpdate.hour}:00 更新`);
     
     updateTimer = setInterval(async () => {
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
       
+      // 重新加载最新配置
+      const latestConfig = loadConfig();
+      
       // 检查是否到了更新时间
-      if (currentHour === config.autoUpdate.hour && currentMinute === 0) {
+      if (currentHour === latestConfig.autoUpdate.hour && currentMinute === 0) {
         console.log('=== 开始定时更新日报内容 ===');
+        console.log('当前关键词:', latestConfig.keywords);
         
         try {
           // 获取新闻
-          const newsTitles = await getNewsFromOpenAI(config.keywords);
+          const newsTitles = await getNewsFromOpenAI(latestConfig.keywords);
           console.log('获取到', newsTitles.length, '条新闻');
           
           // 生成图片
-          const imagePath = await generateImage(newsTitles, config.keywords);
+          const imagePath = await generateImage(newsTitles, latestConfig.keywords);
           console.log('图片生成完成:', imagePath);
           
           // 更新最后更新时间
-          config.autoUpdate.lastUpdateTime = new Date().toISOString();
-          saveConfig(config);
+          latestConfig.autoUpdate.lastUpdateTime = new Date().toISOString();
+          saveConfig(latestConfig);
           
           console.log('=== 定时更新完成 ===');
         } catch (error) {
@@ -689,17 +696,21 @@ function generateHTMLImage(newsTitles, keywords) {
 app.get('/api/news-image', async (req, res) => {
   try {
     console.log('=== 开始处理新闻图片生成请求 ===');
-    console.log('当前配置:', JSON.stringify(config, null, 2));
+    
+    // 重新加载最新配置
+    const latestConfig = loadConfig();
+    console.log('当前关键词:', latestConfig.keywords);
+    console.log('当前配置:', JSON.stringify(latestConfig, null, 2));
     
     // 获取新闻
     console.log('1. 开始调用AI API获取新闻...');
-    const newsTitles = await getNewsFromOpenAI(config.keywords);
+    const newsTitles = await getNewsFromOpenAI(latestConfig.keywords);
     console.log('2. AI API调用完成，获取到', newsTitles.length, '条新闻');
     console.log('新闻标题:', newsTitles);
     
     // 生成图片
     console.log('3. 开始生成图片...');
-    const imagePath = await generateImage(newsTitles, config.keywords);
+    const imagePath = await generateImage(newsTitles, latestConfig.keywords);
     console.log('4. 图片生成完成，路径:', imagePath);
     
     console.log('5. 返回响应...');
@@ -709,7 +720,7 @@ app.get('/api/news-image', async (req, res) => {
       data: {
         imageUrl: `/${imagePath}`,
         newsCount: newsTitles.length,
-        keywords: config.keywords
+        keywords: latestConfig.keywords
       }
     });
     console.log('=== 新闻图片生成请求处理完成 ===');
@@ -1440,17 +1451,21 @@ app.post('/api/update-news', requireAuth, async (req, res) => {
   try {
     console.log('=== 开始手动更新日报内容 ===');
     
+    // 重新加载最新配置
+    const latestConfig = loadConfig();
+    console.log('当前关键词:', latestConfig.keywords);
+    
     // 获取新闻
-    const newsTitles = await getNewsFromOpenAI(config.keywords);
+    const newsTitles = await getNewsFromOpenAI(latestConfig.keywords);
     console.log('获取到', newsTitles.length, '条新闻');
     
     // 生成图片
-    const imagePath = await generateImage(newsTitles, config.keywords);
+    const imagePath = await generateImage(newsTitles, latestConfig.keywords);
     console.log('图片生成完成:', imagePath);
     
     // 更新最后更新时间
-    config.autoUpdate.lastUpdateTime = new Date().toISOString();
-    saveConfig(config);
+    latestConfig.autoUpdate.lastUpdateTime = new Date().toISOString();
+    saveConfig(latestConfig);
     
     console.log('=== 手动更新完成 ===');
     
@@ -1460,7 +1475,7 @@ app.post('/api/update-news', requireAuth, async (req, res) => {
       data: {
         imageUrl: `/${imagePath}`,
         newsCount: newsTitles.length,
-        keywords: config.keywords
+        keywords: latestConfig.keywords
       }
     });
   } catch (error) {
