@@ -44,9 +44,9 @@ const IMAGE_PATH = 'public/news-latest.png';
 // 默认配置
 const defaultConfig = {
   openai: {
-    apiUrl: 'https://aihubmix.com/v1/chat/completions',
-    apiKey: '',
-    model: 'gpt-4o-mini'
+    apiUrl: '', // 请填写API地址，如：https://api.openai.com/v1/chat/completions
+    apiKey: '', // 请填写API密钥
+    model: 'gpt-4o-mini' // 请填写模型名称，如：gpt-3.5-turbo、gpt-4、claude-3等
   },
   keywords: [], // 请填写关键词，如：['科技', 'ai', '社会', '财经']
   useMockData: false,
@@ -914,7 +914,7 @@ app.get('/admin', requireAuth, (req, res) => {
         <div class="section-title">🤖 AI API 配置</div>
         <div class="form-group">
           <label>OpenAI API 地址</label>
-          <input type="text" id="apiUrl" placeholder="https://aihubmix.com/v1/chat/completions">
+          <input type="text" id="apiUrl" placeholder="请输入API地址，如：https://api.openai.com/v1/chat/completions">
         </div>
         <div class="form-group">
           <label>API Key</label>
