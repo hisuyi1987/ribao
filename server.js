@@ -8,35 +8,6 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 管理员密码配置
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ribao123456'; // 可以修改密码
-
-// 基本认证中间件
-function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Access"');
-    return res.status(401).json({ 
-      success: false, 
-      message: '需要管理员认证' 
-    });
-  }
-  
-  const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
-  const [username, password] = auth.split(':');
-  
-  if (username === 'admin' && password === ADMIN_PASSWORD) {
-    next();
-  } else {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Access"');
-    return res.status(401).json({ 
-      success: false, 
-      message: '用户名或密码错误' 
-    });
-  }
-}
-
 // 中间件
 app.use(cors());
 app.use(bodyParser.json());
@@ -62,6 +33,12 @@ const defaultConfig = {
   footerText: '',
   // 新闻条数设置
   newsCount: 10,
+  // 定时更新设置
+  autoUpdate: {
+    enabled: false,
+    hour: 6,  // 默认早上6点更新
+    lastUpdateTime: null
+  },
   imageStyle: {
     width: 600,
     height: 800,
@@ -112,6 +89,56 @@ const defaultConfig = {
 // 确保目录存在
 if (!fs.existsSync('public')) {
   fs.mkdirSync('public');
+}
+
+// 定时更新功能
+let updateTimer = null;
+
+function startAutoUpdate() {
+  if (updateTimer) {
+    clearInterval(updateTimer);
+  }
+  
+  if (config.autoUpdate && config.autoUpdate.enabled) {
+    console.log(`定时更新已启动，每天 ${config.autoUpdate.hour}:00 更新`);
+    
+    updateTimer = setInterval(async () => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      // 检查是否到了更新时间
+      if (currentHour === config.autoUpdate.hour && currentMinute === 0) {
+        console.log('=== 开始定时更新日报内容 ===');
+        
+        try {
+          // 获取新闻
+          const newsTitles = await getNewsFromOpenAI(config.keywords);
+          console.log('获取到', newsTitles.length, '条新闻');
+          
+          // 生成图片
+          const imagePath = await generateImage(newsTitles, config.keywords);
+          console.log('图片生成完成:', imagePath);
+          
+          // 更新最后更新时间
+          config.autoUpdate.lastUpdateTime = new Date().toISOString();
+          saveConfig(config);
+          
+          console.log('=== 定时更新完成 ===');
+        } catch (error) {
+          console.error('定时更新失败:', error.message);
+        }
+      }
+    }, 60000); // 每分钟检查一次
+  }
+}
+
+function stopAutoUpdate() {
+  if (updateTimer) {
+    clearInterval(updateTimer);
+    updateTimer = null;
+    console.log('定时更新已停止');
+  }
 }
 
 // 加载配置
@@ -673,8 +700,8 @@ app.get('/api/news-image', async (req, res) => {
   }
 });
 
-// 后台配置页面 - 需要密码认证
-app.get('/admin', requireAuth, (req, res) => {
+// 后台配置页面
+app.get('/admin', (req, res) => {
   const adminHtml = `
 <!DOCTYPE html>
 <html>
@@ -1027,6 +1054,28 @@ app.get('/admin', requireAuth, (req, res) => {
         </div>
       </div>
 
+      <!-- 定时更新设置 -->
+      <div class="section">
+        <div class="section-title">⏰ 定时更新设置</div>
+        <div class="form-row">
+          <div class="form-col">
+            <label>启用定时更新</label>
+            <input type="checkbox" id="autoUpdateEnabled" style="width: auto;">
+          </div>
+          <div class="form-col">
+            <label>更新时间（小时）</label>
+            <input type="number" id="autoUpdateHour" placeholder="6" min="0" max="23" value="6">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>最后更新时间</label>
+          <input type="text" id="lastUpdateTime" readonly style="background-color: #f5f5f5;">
+        </div>
+        <div class="form-group">
+          <button type="button" class="test-btn" onclick="manualUpdate()">🔄 立即更新</button>
+        </div>
+      </div>
+
       <!-- 按钮组 -->
       <div class="btn-group">
         <button type="submit" class="save-btn">💾 保存配置</button>
@@ -1095,6 +1144,18 @@ app.get('/admin', requireAuth, (req, res) => {
           document.getElementById('backgroundImage').value = config.imageStyle.backgroundImage || '';
           document.getElementById('logoImage').value = config.imageStyle.logoImage || '';
           document.getElementById('useMockData').checked = config.useMockData || false;
+          
+          // 加载定时更新配置
+          document.getElementById('autoUpdateEnabled').checked = config.autoUpdate?.enabled || false;
+          document.getElementById('autoUpdateHour').value = config.autoUpdate?.hour || 6;
+          
+          // 显示最后更新时间
+          if (config.autoUpdate?.lastUpdateTime) {
+            const lastUpdate = new Date(config.autoUpdate.lastUpdateTime);
+            document.getElementById('lastUpdateTime').value = lastUpdate.toLocaleString('zh-CN');
+          } else {
+            document.getElementById('lastUpdateTime').value = '从未更新';
+          }
         }
       } catch (error) {
         showMessage('加载配置失败: ' + error.message, 'error');
@@ -1129,6 +1190,11 @@ app.get('/admin', requireAuth, (req, res) => {
         footerText: document.getElementById('footerText').value,
         newsCount: parseInt(document.getElementById('newsCount').value) || 10,
         useMockData: document.getElementById('useMockData').checked,
+        autoUpdate: {
+          enabled: document.getElementById('autoUpdateEnabled').checked,
+          hour: parseInt(document.getElementById('autoUpdateHour').value) || 6,
+          lastUpdateTime: null
+        },
         imageStyle: {
           width: parseInt(document.getElementById('imageWidth').value) || 600,
           height: parseInt(document.getElementById('imageHeight').value) || 800,
@@ -1207,6 +1273,27 @@ app.get('/admin', requireAuth, (req, res) => {
       }
     }
     
+    // 立即更新
+    async function manualUpdate() {
+      try {
+        showMessage('正在立即更新日报内容...', 'success');
+        const response = await fetch('/api/update-news');
+        const data = await response.json();
+        
+        if (data.success) {
+          showMessage('日报内容更新成功！', 'success');
+          // 刷新最后更新时间显示
+          setTimeout(() => {
+            loadConfig();
+          }, 1000);
+        } else {
+          showMessage('更新失败: ' + data.message, 'error');
+        }
+      } catch (error) {
+        showMessage('更新失败: ' + error.message, 'error');
+      }
+    }
+    
     // 页面加载时加载配置
     loadConfig();
   </script>
@@ -1216,16 +1303,16 @@ app.get('/admin', requireAuth, (req, res) => {
   res.send(adminHtml);
 });
 
-// API路由：获取配置 - 需要密码认证
-app.get('/api/config', requireAuth, (req, res) => {
+// API路由：获取配置
+app.get('/api/config', (req, res) => {
   res.json({
     success: true,
     data: config
   });
 });
 
-// API路由：保存配置 - 需要密码认证
-app.post('/api/config', requireAuth, (req, res) => {
+// API路由：保存配置
+app.post('/api/config', (req, res) => {
   try {
     const newConfig = req.body;
     
@@ -1247,6 +1334,9 @@ app.post('/api/config', requireAuth, (req, res) => {
     // 保存配置
     config = newConfig;
     if (saveConfig(config)) {
+      // 重启定时更新
+      startAutoUpdate();
+      
       res.json({
         success: true,
         message: '配置保存成功'
@@ -1258,6 +1348,43 @@ app.post('/api/config', requireAuth, (req, res) => {
       });
     }
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// 手动更新API接口
+app.post('/api/update-news', async (req, res) => {
+  try {
+    console.log('=== 开始手动更新日报内容 ===');
+    
+    // 获取新闻
+    const newsTitles = await getNewsFromOpenAI(config.keywords);
+    console.log('获取到', newsTitles.length, '条新闻');
+    
+    // 生成图片
+    const imagePath = await generateImage(newsTitles, config.keywords);
+    console.log('图片生成完成:', imagePath);
+    
+    // 更新最后更新时间
+    config.autoUpdate.lastUpdateTime = new Date().toISOString();
+    saveConfig(config);
+    
+    console.log('=== 手动更新完成 ===');
+    
+    res.json({
+      success: true,
+      message: '日报内容更新成功',
+      data: {
+        imageUrl: `/${imagePath}`,
+        newsCount: newsTitles.length,
+        keywords: config.keywords
+      }
+    });
+  } catch (error) {
+    console.error('手动更新失败:', error.message);
     res.status(500).json({
       success: false,
       message: error.message
@@ -1306,4 +1433,7 @@ app.listen(PORT, () => {
   console.log(`📱 后台配置页面: http://localhost:${PORT}/admin`);
   console.log(`🖼️  新闻图片API: http://localhost:${PORT}/api/news-image`);
   console.log(`🏠 首页: http://localhost:${PORT}`);
+  
+  // 启动定时更新
+  startAutoUpdate();
 }); 
