@@ -879,28 +879,14 @@ app.get('/admin', requireAuth, (req, res) => {
       width: 100%;
       margin-top: 10px;
     }
-    .message {
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 20px;
-    }
-    .success {
-      background: #f6ffed;
-      border: 1px solid #b7eb8f;
-      color: #52c41a;
-    }
-    .error {
-      background: #fff2f0;
-      border: 1px solid #ffccc7;
-      color: #ff4d4f;
-    }
+
   </style>
 </head>
 <body>
   <div class="container">
     <h1>新闻图片生成系统 - 后台配置</h1>
     
-    <div id="message"></div>
+
     
     <form id="configForm">
       
