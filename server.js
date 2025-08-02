@@ -784,6 +784,36 @@ app.get('/admin', (req, res) => {
       cursor: pointer;
       font-size: 16px;
       margin-right: 10px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .save-btn:hover {
+      background: #389e0d;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(82, 196, 26, 0.3);
+    }
+    .save-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(82, 196, 26, 0.3);
+    }
+    .save-btn.loading {
+      background: #d9d9d9;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .save-btn.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      border: 2px solid transparent;
+      border-top: 2px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
     .test-btn {
       background: #1890ff;
@@ -793,10 +823,71 @@ app.get('/admin', (req, res) => {
       border-radius: 4px;
       cursor: pointer;
       font-size: 16px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .test-btn:hover {
+      background: #096dd9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+    }
+    .test-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+    }
+    .test-btn.loading {
+      background: #d9d9d9;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .test-btn.loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      border: 2px solid transparent;
+      border-top: 2px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
     .btn-group {
       text-align: center;
       margin-top: 30px;
+    }
+    
+    /* 消息提示样式 */
+    .message {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .message.show {
+      transform: translateX(0);
+    }
+    .message.success {
+      background: #52c41a;
+    }
+    .message.error {
+      background: #ff4d4f;
+    }
+    .message.info {
+      background: #1890ff;
     }
     .preview {
       margin-top: 20px;
@@ -1072,7 +1163,7 @@ app.get('/admin', (req, res) => {
           <input type="text" id="lastUpdateTime" readonly style="background-color: #f5f5f5;">
         </div>
         <div class="form-group">
-          <button type="button" class="test-btn" onclick="manualUpdate()">🔄 立即更新</button>
+          <button type="button" class="test-btn" onclick="manualUpdate()" style="background: #fa8c16;">🔄 立即更新</button>
         </div>
       </div>
 
@@ -1164,18 +1255,42 @@ app.get('/admin', (req, res) => {
     
     // 显示消息
     function showMessage(message, type) {
-      const messageDiv = document.getElementById('message');
+      let messageDiv = document.getElementById('message');
+      if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'message';
+        document.body.appendChild(messageDiv);
+      }
+      
       messageDiv.className = \`message \${type}\`;
       messageDiv.textContent = message;
+      
+      // 显示动画
       setTimeout(() => {
-        messageDiv.textContent = '';
-        messageDiv.className = '';
+        messageDiv.classList.add('show');
+      }, 100);
+      
+      // 自动隐藏
+      setTimeout(() => {
+        messageDiv.classList.remove('show');
+        setTimeout(() => {
+          messageDiv.textContent = '';
+          messageDiv.className = '';
+        }, 300);
       }, 3000);
     }
     
     // 保存配置
     document.getElementById('configForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      const saveBtn = document.querySelector('.save-btn');
+      const originalText = saveBtn.textContent;
+      
+      // 设置加载状态
+      saveBtn.classList.add('loading');
+      saveBtn.textContent = '💾 保存中...';
+      saveBtn.disabled = true;
       
       const keywords = document.getElementById('keywords').value.split(',').map(k => k.trim()).filter(k => k);
       
@@ -1247,16 +1362,34 @@ app.get('/admin', (req, res) => {
         const data = await response.json();
         if (data.success) {
           showMessage('配置保存成功！', 'success');
+          // 添加成功动画
+          saveBtn.style.background = '#52c41a';
+          setTimeout(() => {
+            saveBtn.style.background = '';
+          }, 1000);
         } else {
           showMessage('配置保存失败: ' + data.message, 'error');
         }
       } catch (error) {
         showMessage('配置保存失败: ' + error.message, 'error');
+      } finally {
+        // 恢复按钮状态
+        saveBtn.classList.remove('loading');
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
       }
     });
     
     // 测试生成
     async function testGenerate() {
+      const testBtn = document.querySelector('.test-btn');
+      const originalText = testBtn.textContent;
+      
+      // 设置加载状态
+      testBtn.classList.add('loading');
+      testBtn.textContent = '🚀 生成中...';
+      testBtn.disabled = true;
+      
       try {
         showMessage('正在生成新闻图片...', 'success');
         const response = await fetch('/api/news-image');
@@ -1264,17 +1397,35 @@ app.get('/admin', (req, res) => {
         
         if (data.success) {
           showMessage('新闻图片生成成功！', 'success');
+          // 添加成功动画
+          testBtn.style.background = '#52c41a';
+          setTimeout(() => {
+            testBtn.style.background = '';
+          }, 1000);
           window.open(data.data.imageUrl, '_blank');
         } else {
           showMessage('生成失败: ' + data.message, 'error');
         }
       } catch (error) {
         showMessage('生成失败: ' + error.message, 'error');
+      } finally {
+        // 恢复按钮状态
+        testBtn.classList.remove('loading');
+        testBtn.textContent = originalText;
+        testBtn.disabled = false;
       }
     }
     
     // 立即更新
     async function manualUpdate() {
+      const updateBtn = document.querySelector('button[onclick="manualUpdate()"]');
+      const originalText = updateBtn.textContent;
+      
+      // 设置加载状态
+      updateBtn.classList.add('loading');
+      updateBtn.textContent = '🔄 更新中...';
+      updateBtn.disabled = true;
+      
       try {
         showMessage('正在立即更新日报内容...', 'success');
         const response = await fetch('/api/update-news');
@@ -1282,6 +1433,11 @@ app.get('/admin', (req, res) => {
         
         if (data.success) {
           showMessage('日报内容更新成功！', 'success');
+          // 添加成功动画
+          updateBtn.style.background = '#52c41a';
+          setTimeout(() => {
+            updateBtn.style.background = '';
+          }, 1000);
           // 刷新最后更新时间显示
           setTimeout(() => {
             loadConfig();
@@ -1291,6 +1447,11 @@ app.get('/admin', (req, res) => {
         }
       } catch (error) {
         showMessage('更新失败: ' + error.message, 'error');
+      } finally {
+        // 恢复按钮状态
+        updateBtn.classList.remove('loading');
+        updateBtn.textContent = originalText;
+        updateBtn.disabled = false;
       }
     }
     
