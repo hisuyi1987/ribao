@@ -48,12 +48,12 @@ const defaultConfig = {
     apiKey: '',
     model: 'gpt-4o-mini'
   },
-  keywords: ['科技', 'ai'],
+  keywords: [], // 请填写关键词，如：['科技', 'ai', '社会', '财经']
   useMockData: false,
   // 添加自定义搜索提示词
-  customSearchPrompt: '',
+  customSearchPrompt: '', // 可选：自定义搜索要求，如："重点关注国内新闻"
   // 添加落款文本
-  footerText: '',
+  footerText: '', // 可选：图片底部落款，如："每日新闻"
   // 新闻条数设置
   newsCount: 10,
   // 定时更新设置
@@ -702,6 +702,14 @@ app.get('/api/news-image', async (req, res) => {
     console.log('当前关键词:', latestConfig.keywords);
     console.log('当前配置:', JSON.stringify(latestConfig, null, 2));
     
+    // 验证关键词
+    if (!latestConfig.keywords || latestConfig.keywords.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '请先在配置页面设置关键词'
+      });
+    }
+    
     // 获取新闻
     console.log('1. 开始调用AI API获取新闻...');
     const newsTitles = await getNewsFromOpenAI(latestConfig.keywords);
@@ -918,7 +926,7 @@ app.get('/admin', requireAuth, (req, res) => {
         </div>
         <div class="form-group">
           <label>关键词（用逗号分隔）</label>
-          <input type="text" id="keywords" placeholder="科技,社会,财经">
+          <input type="text" id="keywords" placeholder="请输入关键词，如：科技,社会,财经,ai,人工智能">
         </div>
         <div class="form-group">
           <label>自定义搜索提示词</label>
@@ -1159,7 +1167,7 @@ app.get('/admin', requireAuth, (req, res) => {
           document.getElementById('apiUrl').value = config.openai.apiUrl || '';
           document.getElementById('apiKey').value = config.openai.apiKey || '';
           document.getElementById('model').value = config.openai.model || 'gpt-3.5-turbo';
-          document.getElementById('keywords').value = config.keywords.join(',') || '';
+          document.getElementById('keywords').value = config.keywords && config.keywords.length > 0 ? config.keywords.join(',') : '';
           document.getElementById('customSearchPrompt').value = config.customSearchPrompt || '';
           document.getElementById('footerText').value = config.footerText || '';
           document.getElementById('newsCount').value = config.newsCount || 10;
@@ -1454,6 +1462,14 @@ app.post('/api/update-news', requireAuth, async (req, res) => {
     // 重新加载最新配置
     const latestConfig = loadConfig();
     console.log('当前关键词:', latestConfig.keywords);
+    
+    // 验证关键词
+    if (!latestConfig.keywords || latestConfig.keywords.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '请先在配置页面设置关键词'
+      });
+    }
     
     // 获取新闻
     const newsTitles = await getNewsFromOpenAI(latestConfig.keywords);
