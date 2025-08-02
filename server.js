@@ -8,6 +8,29 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 管理员密码配置
+const ADMIN_PASSWORD = '123456'; // 默认密码
+
+// 密码验证中间件
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Access"');
+    return res.status(401).json({ error: '需要身份验证' });
+  }
+  
+  const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
+  const [username, password] = auth.split(':');
+  
+  if (password === ADMIN_PASSWORD) {
+    next();
+  } else {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Access"');
+    res.status(401).json({ error: '密码错误' });
+  }
+}
+
 // 中间件
 app.use(cors());
 app.use(bodyParser.json());
@@ -701,7 +724,7 @@ app.get('/api/news-image', async (req, res) => {
 });
 
 // 后台配置页面
-app.get('/admin', (req, res) => {
+app.get('/admin', requireAuth, (req, res) => {
   const adminHtml = `
 <!DOCTYPE html>
 <html>
@@ -1465,7 +1488,7 @@ app.get('/admin', (req, res) => {
 });
 
 // API路由：获取配置
-app.get('/api/config', (req, res) => {
+app.get('/api/config', requireAuth, (req, res) => {
   res.json({
     success: true,
     data: config
@@ -1473,7 +1496,7 @@ app.get('/api/config', (req, res) => {
 });
 
 // API路由：保存配置
-app.post('/api/config', (req, res) => {
+app.post('/api/config', requireAuth, (req, res) => {
   try {
     const newConfig = req.body;
     
@@ -1517,7 +1540,7 @@ app.post('/api/config', (req, res) => {
 });
 
 // 手动更新API接口
-app.post('/api/update-news', async (req, res) => {
+app.post('/api/update-news', requireAuth, async (req, res) => {
   try {
     console.log('=== 开始手动更新日报内容 ===');
     
