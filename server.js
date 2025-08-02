@@ -838,6 +838,18 @@ app.get('/admin', requireAuth, (req, res) => {
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
+    .save-btn.loading {
+      color: transparent !important;
+    }
+    .save-btn.loading::before {
+      content: '💾 保存中...';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      z-index: 1;
+    }
     .test-btn {
       background: #1890ff;
       color: white;
@@ -876,6 +888,29 @@ app.get('/admin', requireAuth, (req, res) => {
       border-top: 2px solid #fff;
       border-radius: 50%;
       animation: spin 1s linear infinite;
+    }
+    .test-btn.loading {
+      color: transparent !important;
+    }
+    .test-btn.loading::before {
+      content: '🚀 生成中...';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      z-index: 1;
+    }
+    
+    /* 立即更新按钮特殊样式 */
+    .test-btn[onclick="manualUpdate()"] {
+      background: #fa8c16 !important;
+    }
+    .test-btn[onclick="manualUpdate()"]:hover {
+      background: #d46b08 !important;
+    }
+    .test-btn[onclick="manualUpdate()"].loading::before {
+      content: '🔄 更新中...';
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -1312,7 +1347,6 @@ app.get('/admin', requireAuth, (req, res) => {
       
       // 设置加载状态
       saveBtn.classList.add('loading');
-      saveBtn.textContent = '💾 保存中...';
       saveBtn.disabled = true;
       
       const keywords = document.getElementById('keywords').value.split(',').map(k => k.trim()).filter(k => k);
@@ -1398,7 +1432,6 @@ app.get('/admin', requireAuth, (req, res) => {
       } finally {
         // 恢复按钮状态
         saveBtn.classList.remove('loading');
-        saveBtn.textContent = originalText;
         saveBtn.disabled = false;
       }
     });
@@ -1410,7 +1443,6 @@ app.get('/admin', requireAuth, (req, res) => {
       
       // 设置加载状态
       testBtn.classList.add('loading');
-      testBtn.textContent = '🚀 生成中...';
       testBtn.disabled = true;
       
       try {
@@ -1434,7 +1466,6 @@ app.get('/admin', requireAuth, (req, res) => {
       } finally {
         // 恢复按钮状态
         testBtn.classList.remove('loading');
-        testBtn.textContent = originalText;
         testBtn.disabled = false;
       }
     }
@@ -1446,7 +1477,6 @@ app.get('/admin', requireAuth, (req, res) => {
       
       // 设置加载状态
       updateBtn.classList.add('loading');
-      updateBtn.textContent = '🔄 更新中...';
       updateBtn.disabled = true;
       
       try {
@@ -1473,7 +1503,6 @@ app.get('/admin', requireAuth, (req, res) => {
       } finally {
         // 恢复按钮状态
         updateBtn.classList.remove('loading');
-        updateBtn.textContent = originalText;
         updateBtn.disabled = false;
       }
     }
