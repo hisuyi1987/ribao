@@ -9,12 +9,16 @@ async function testAPI() {
     }
   };
 
-  const prompt = `请搜索最近24小时内（今天和昨天）与科技相关的最新新闻，返回3条新闻标题，格式为JSON数组：
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+  const prompt = `请搜索${today}（今天）和${yesterday}（昨天）这两天内与科技相关的最新新闻，返回3条新闻标题，格式为JSON数组：
 要求：
-1. 只返回最近24小时内的新闻，优先选择今天发布的新闻
-2. 确保新闻的时效性和真实性，不要返回过时的旧闻
-3. 每条标题不超过50字
-4. 返回格式：[{"title": "新闻标题1"}, {"title": "新闻标题2"}]`;
+1. 严格限制只返回今天和昨天（${today}和${yesterday}）的新闻
+2. 每条新闻必须标注发布日期，格式为：[日期]标题
+3. 绝对不要返回更早的旧新闻
+4. 每条标题不超过50字
+5. 返回格式：[{"title": "[${today}]新闻标题1"}, {"title": "[${yesterday}]新闻标题2"}]`;
 
   try {
     console.log('测试 API 连接...');
