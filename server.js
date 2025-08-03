@@ -310,6 +310,11 @@ async function getNewsFromOpenAI(keywords) {
       temperature: 0.7
     };
     
+    // 检查模型是否支持联网搜索
+    const isSearchModel = config.openai.model.includes('search') || 
+                         config.openai.model.includes('web') || 
+                         config.openai.model.includes('browsing');
+    
     if (config.openai.apiUrl.includes('aihubmix.com')) {
       // aihubmix.com format
       requestData = {
@@ -320,66 +325,92 @@ async function getNewsFromOpenAI(keywords) {
         }
       };
     } else if (config.openai.apiUrl.includes('poloai.top')) {
-      // poloai.top format - 只支持function类型的工具
+      // poloai.top format - 根据模型类型决定是否添加工具
       requestData = {
-        ...baseRequestData,
-        // 移除不支持的tools配置
-        // 对于deepseek-r1-search模型，不需要额外配置，它会自动联网搜索
+        ...baseRequestData
       };
+      
+      // 只有非搜索模型才尝试添加工具
+      if (!isSearchModel) {
+        try {
+          requestData.tools = [{"type": "web_search"}];
+          requestData.tool_choice = "auto";
+        } catch (e) {
+          // 如果添加工具失败，保持基础配置
+          console.log('   - 警告: 无法添加联网搜索工具，使用基础配置');
+        }
+      }
     } else if (config.openai.apiUrl.includes('api.openai.com')) {
       // 标准OpenAI API
       requestData = {
         ...baseRequestData,
-        stream: false,
-        tools: [{"type": "retrieval"}], // 启用知识检索
-        tool_choice: "auto"
+        stream: false
       };
+      
+      // 根据模型类型添加工具
+      if (!isSearchModel) {
+        requestData.tools = [{"type": "retrieval"}];
+        requestData.tool_choice = "auto";
+      }
     } else if (config.openai.apiUrl.includes('dashscope') || config.openai.apiUrl.includes('qianwen')) {
       // 通义千问API
       requestData = {
         ...baseRequestData,
         parameters: {
-          enable_search: true
+          enable_search: !isSearchModel // 只有非搜索模型才启用搜索
         }
       };
     } else if (config.openai.apiUrl.includes('claude') || config.openai.apiUrl.includes('anthropic')) {
       // Claude/Anthropic API
       requestData = {
-        ...baseRequestData,
-        system: "Please use your web search capability to find the most recent news.",
-        tools: [{"type": "web_search"}]
+        ...baseRequestData
       };
+      
+      if (!isSearchModel) {
+        requestData.system = "Please use your web search capability to find the most recent news.";
+        requestData.tools = [{"type": "web_search"}];
+      }
     } else if (config.openai.apiUrl.includes('gemini') || config.openai.apiUrl.includes('google')) {
       // Google Gemini API
       requestData = {
-        ...baseRequestData,
-        tools: [{"type": "web_search"}],
-        tool_config: {
+        ...baseRequestData
+      };
+      
+      if (!isSearchModel) {
+        requestData.tools = [{"type": "web_search"}];
+        requestData.tool_config = {
           web_search: {
             recency_days: 2
           }
-        }
-      };
+        };
+      }
     } else {
-      // 通用格式，尝试添加多种联网搜索参数
+      // 通用格式，根据模型类型决定是否添加联网搜索参数
       requestData = {
         ...baseRequestData,
-        stream: false,
-        // 尝试各种可能的联网搜索参数
-        web_search: true,
-        tools: [
-          {"type": "web_search"},
-          {"type": "retrieval"}
-        ],
-        tool_choice: "auto",
-        web_search_options: {
-          enable: true,
-          search_recent_days: 2
-        },
-        parameters: {
-          enable_search: true
-        }
+        stream: false
       };
+      
+      // 只有非搜索模型才尝试添加各种联网搜索参数
+      if (!isSearchModel) {
+        try {
+          requestData.web_search = true;
+          requestData.tools = [
+            {"type": "web_search"},
+            {"type": "retrieval"}
+          ];
+          requestData.tool_choice = "auto";
+          requestData.web_search_options = {
+            enable: true,
+            search_recent_days: 2
+          };
+          requestData.parameters = {
+            enable_search: true
+          };
+        } catch (e) {
+          console.log('   - 警告: 无法添加联网搜索参数，使用基础配置');
+        }
+      }
     }
     
     // 添加授权头
