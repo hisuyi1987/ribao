@@ -342,42 +342,41 @@ async function getNewsFromOpenAI(keywords) {
         }
       };
     } else if (config.openai.apiUrl.includes('poloai.top')) {
-      // poloai.top format - 根据模型类型决定是否添加工具
-      requestData = {
-        ...baseRequestData
-      };
+      // poloai.top format - 根据API文档配置
+      
+      // 检查是否需要使用特殊端点
+      if (config.openai.apiUrl.includes('/v1/chat/completions')) {
+        apiUrl = config.openai.apiUrl.replace('/v1/chat/completions', '/v1/responses');
+      } else {
+        apiUrl = config.openai.apiUrl;
+      }
       
       // 检查是否是Gemini模型
       if (config.openai.model.includes('gemini')) {
-        // Gemini模型通过PoloAI代理需要特殊格式
-        requestData.tools = [
-          {
-            "function_declarations": [
-              {
-                "name": "search_web",
-                "description": "Search the web for real-time information",
-                "parameters": {
-                  "type": "object",
-                  "properties": {
-                    "query": {
-                      "type": "string",
-                      "description": "The search query"
-                    }
-                  },
-                  "required": ["query"]
-                }
-              }
-            ]
-          }
-        ];
-      } else if (!isSearchModel) {
+        // 根据PoloAI文档配置
+        requestData = {
+          model: config.openai.model,
+          tools: [
+            {
+              type: "web_search_preview"
+            }
+          ],
+          input: prompt
+        };
+      } else {
         // 非Gemini模型的常规配置
-        try {
-          requestData.tools = [{"type": "web_search"}];
-          requestData.tool_choice = "auto";
-        } catch (e) {
-          // 如果添加工具失败，保持基础配置
-          console.log('   - 警告: 无法添加联网搜索工具，使用基础配置');
+        requestData = {
+          ...baseRequestData
+        };
+        
+        if (!isSearchModel) {
+          try {
+            requestData.tools = [{"type": "web_search"}];
+            requestData.tool_choice = "auto";
+          } catch (e) {
+            // 如果添加工具失败，保持基础配置
+            console.log('   - 警告: 无法添加联网搜索工具，使用基础配置');
+          }
         }
       }
     } else if (config.openai.apiUrl.includes('api.openai.com')) {
