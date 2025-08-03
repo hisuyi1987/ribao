@@ -320,11 +320,11 @@ async function getNewsFromOpenAI(keywords) {
         }
       };
     } else if (config.openai.apiUrl.includes('poloai.top')) {
-      // poloai.top format
+      // poloai.top format - 只支持function类型的工具
       requestData = {
         ...baseRequestData,
-        tools: [{"type": "web_search"}], // 启用联网搜索
-        tool_choice: "auto"
+        // 移除不支持的tools配置
+        // 对于deepseek-r1-search模型，不需要额外配置，它会自动联网搜索
       };
     } else if (config.openai.apiUrl.includes('api.openai.com')) {
       // 标准OpenAI API
