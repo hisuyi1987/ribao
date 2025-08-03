@@ -308,7 +308,10 @@ async function getNewsFromOpenAI(keywords) {
           }
         ],
         max_tokens: 1000,
-        web_search_options: {} // 启用联网搜索
+        web_search_options: {
+          enable: true, // 明确启用联网搜索
+          search_recent_days: 2 // 搜索最近2天的内容
+        }
       };
       headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
     } else if (config.openai.apiUrl.includes('poloai.top')) {
@@ -322,7 +325,9 @@ async function getNewsFromOpenAI(keywords) {
           }
         ],
         max_tokens: 1000,
-        temperature: 0.7
+        temperature: 0.7,
+        tools: [{"type": "web_search"}], // 启用联网搜索
+        tool_choice: "auto"
       };
       headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
     } else {
@@ -337,7 +342,9 @@ async function getNewsFromOpenAI(keywords) {
         ],
         max_tokens: 1000,
         temperature: 0.7,
-        stream: false
+        stream: false,
+        tools: [{"type": "retrieval"}], // 启用知识检索
+        tool_choice: "auto"
       };
       headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
     }
