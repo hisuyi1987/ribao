@@ -406,8 +406,18 @@ async function getNewsFromOpenAI(keywords) {
         ...baseRequestData
       };
       
-      // Moonshot目前不支持web_search工具，直接使用基础请求
-      // 联网搜索功能由模型本身提供，不需要额外工具配置
+      // 根据Moonshot官方文档，需要添加tools配置来启用联网搜索
+      if (!isSearchModel) {
+        requestData.tools = [
+          {
+            type: "web_search",
+            web_search: {
+              enable: true
+            }
+          }
+        ];
+        requestData.tool_choice = "auto";
+      }
     } else {
       // 通用格式，根据模型类型决定是否添加联网搜索参数
       requestData = {
