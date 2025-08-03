@@ -265,21 +265,35 @@ async function getNewsFromOpenAI(keywords) {
     let today = new Date().toISOString().split('T')[0];
     let yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     
-    let prompt = `请从以下可靠的新闻网站搜索${today}（今天）和${yesterday}（昨天）这两天内与以下关键词相关的最新新闻，返回${config.newsCount}条新闻标题，格式为JSON数组：
+    const prompt = `请搜索最近24小时内（今天和昨天）与以下关键词相关的最新新闻：
 
-新闻来源网站：人民网、新华网、澎湃新闻、界面新闻、36氪、财新网、中国日报网
 关键词：${keywords.join('、')}
 
 要求：
-1. 严格限制只返回今天和昨天（${today}和${yesterday}）的新闻
-2. 每条新闻必须标注发布日期和来源网站，格式为：[日期][来源]标题
-3. 绝对不要返回更早的旧新闻，也不要编造不存在的新闻
-4. 每条标题不超过25字，但必须包含具体事件、数据或观点等实质内容
-5. 确保内容多样性，每个关键词至少有2-3条不同主题的新闻
-6. 避免重复内容，即使表述不同也不要包含相同事件的新闻
-7. 标题应该是完整的新闻标题，不要只是话题或概念
-8. 如果某个关键词在最近两天内没有相关新闻，可以跳过该关键词
-9. 返回格式：[{"title": "[${today}][人民网]新闻标题1"}, {"title": "[${yesterday}][新华网]新闻标题2"}]`;
+1. 搜索真实、具体的新闻内容，不要编造
+2. 每条新闻需要包含：
+   - 完整的新闻内容（至少100字）
+   - 根据内容生成的标题
+   - 具体的日期和来源
+3. 新闻内容要有实质性，包含具体的事件、数据、观点或事实
+4. 每条新闻都要有不同的主题，确保多样性
+5. 优先选择以下可靠的中文新闻网站作为来源：
+   - 新华网、人民网、央视网
+   - 澎湃新闻、界面新闻
+   - 财新网、第一财经
+   - 科技日报、中国科学报
+
+输出格式：
+每条新闻按以下格式输出：
+
+[日期][来源]标题
+新闻内容（至少100字的完整内容）
+
+示例：
+[2025-08-03][新华网]中国新能源汽车出口量创新高
+据海关总署最新数据显示，2025年7月中国新能源汽车出口量达到15.6万辆，同比增长89.2%，创历史新高。其中纯电动汽车出口12.3万辆，插电式混合动力汽车出口3.3万辆。主要出口市场包括欧洲、东南亚和拉美地区，其中对欧盟出口量同比增长120%。专家分析认为，中国新能源汽车在技术、成本和服务方面的优势正在全球市场得到认可。
+
+请确保所有新闻都是真实、具体、有实质内容的，不要编造或使用过时的信息。`;
 
     // 如果有自定义搜索提示词，添加到请求中
     if (config.customSearchPrompt && config.customSearchPrompt.trim()) {
@@ -444,84 +458,73 @@ async function getNewsFromOpenAI(keywords) {
       content = JSON.stringify(response.data);
     }
 
-    // 尝试解析JSON
+    // 尝试解析AI返回的新闻内容
     try {
-      // 首先尝试直接解析JSON
-      const newsData = JSON.parse(content);
-      
       // 提取自定义内容（如果有）
       const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
       if (customContentMatch && customContentMatch[1]) {
         console.log('✅ 提取到自定义内容:', customContentMatch[1].trim());
-        // 将自定义内容存储到全局变量中，供图片生成时使用
         global.customContent = customContentMatch[1].trim();
       } else {
         console.log('❌ 未找到自定义内容标签');
         global.customContent = null;
       }
-      
-      return newsData.map(item => item.title);
-    } catch (parseError) {
-      console.log('直接JSON解析失败，尝试提取JSON格式内容...');
-      
-      // 尝试从文本中提取JSON格式的内容
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        try {
-          const jsonContent = jsonMatch[0];
-          const newsData = JSON.parse(jsonContent);
-          
-          // 提取自定义内容（如果有）
-          const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
-          if (customContentMatch && customContentMatch[1]) {
-            console.log('✅ 提取到自定义内容:', customContentMatch[1].trim());
-            // 将自定义内容存储到全局变量中，供图片生成时使用
-            global.customContent = customContentMatch[1].trim();
-          } else {
-            console.log('❌ 未找到自定义内容标签');
-            global.customContent = null;
+
+      // 解析新闻内容格式：[日期][来源]标题\n新闻内容
+      const newsItems = [];
+      const lines = content.split('\n');
+      let currentTitle = '';
+      let currentContent = '';
+      let isReadingContent = false;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // 检查是否是新闻标题行（格式：[日期][来源]标题）
+        const titleMatch = trimmed.match(/^\[(\d{4}-\d{2}-\d{2})\]\[([^\]]+)\](.+)$/);
+        if (titleMatch) {
+          // 保存前一条新闻
+          if (currentTitle && currentContent) {
+            newsItems.push({
+              title: currentTitle,
+              content: currentContent.trim()
+            });
           }
           
-          return newsData.map(item => item.title);
-        } catch (jsonError) {
-          console.log('JSON数组解析失败，尝试逐行提取...');
+          // 开始新新闻
+          currentTitle = trimmed;
+          currentContent = '';
+          isReadingContent = true;
+        } else if (isReadingContent && currentTitle) {
+          // 继续读取新闻内容
+          currentContent += line + '\n';
         }
       }
-      
-      // 尝试从文本中提取新闻标题（处理包含格式标记的情况）
-      const lines = content.split('\n').filter(line => {
-        const trimmed = line.trim();
-        // 过滤掉格式标记、空行、标题行等
-        return trimmed.length > 5 && 
-               !trimmed.startsWith('以下是与') &&
-               !trimmed.startsWith('```') &&
-               !trimmed.startsWith('新闻标题') &&
-               !trimmed.startsWith('相关的最新') &&
-               trimmed.includes('title');
-      });
-      
-      const titles = [];
-      for (const line of lines) {
-        // 提取title字段的内容
-        const titleMatch = line.match(/"title":\s*"([^"]+)"/);
-        if (titleMatch && titleMatch[1]) {
-          titles.push(titleMatch[1]);
-        }
+
+      // 保存最后一条新闻
+      if (currentTitle && currentContent) {
+        newsItems.push({
+          title: currentTitle,
+          content: currentContent.trim()
+        });
       }
-      
-      if (titles.length > 0) {
-        // 提取自定义内容（如果有）
-        const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
-        if (customContentMatch && customContentMatch[1]) {
-          console.log('✅ 提取到自定义内容:', customContentMatch[1].trim());
-          // 将自定义内容存储到全局变量中，供图片生成时使用
-          global.customContent = customContentMatch[1].trim();
-        } else {
-          console.log('❌ 未找到自定义内容标签');
-          global.customContent = null;
-        }
-        return titles;
+
+      // 如果解析成功，返回标题列表
+      if (newsItems.length > 0) {
+        console.log(`✅ 成功解析 ${newsItems.length} 条新闻`);
+        // 将完整的新闻内容存储到全局变量，供后续使用
+        global.newsItems = newsItems;
+        return newsItems.map(item => item.title);
       }
+
+      // 如果解析失败，尝试旧的JSON格式
+      console.log('新闻内容解析失败，尝试JSON格式...');
+      const newsData = JSON.parse(content);
+      return newsData.map(item => item.title);
+      
+    } catch (parseError) {
+      console.log('新闻内容解析失败:', parseError.message);
       
       // 最后的备选方案：按行分割并过滤
       const fallbackLines = content.split(/[。！？\n]/).filter(line => {
@@ -529,21 +532,19 @@ async function getNewsFromOpenAI(keywords) {
         return trimmed.length > 5 && 
                !trimmed.startsWith('以下是与') &&
                !trimmed.startsWith('```') &&
-               !trimmed.startsWith('新闻标题');
+               !trimmed.startsWith('新闻标题') &&
+               !trimmed.startsWith('要求：') &&
+               !trimmed.startsWith('输出格式：') &&
+               !trimmed.startsWith('示例：') &&
+               !trimmed.startsWith('请确保');
       });
       
-      // 提取自定义内容（如果有）
-      const customContentMatch = content.match(/<custom_content>([^<]+)<\/custom_content>/);
-      if (customContentMatch && customContentMatch[1]) {
-        console.log('✅ 提取到自定义内容:', customContentMatch[1].trim());
-        // 将自定义内容存储到全局变量中，供图片生成时使用
-        global.customContent = customContentMatch[1].trim();
-      } else {
-        console.log('❌ 未找到自定义内容标签');
-        global.customContent = null;
+      if (fallbackLines.length > 0) {
+        console.log(`✅ 使用备选方案提取 ${fallbackLines.length} 条新闻`);
+        return fallbackLines.slice(0, config.newsCount);
       }
       
-      return fallbackLines.slice(0, config.newsCount || 10);
+      throw new Error('无法解析AI返回的新闻内容');
     }
   } catch (error) {
     console.error('调用AI API失败:', error.message);
@@ -618,14 +619,59 @@ async function generateImage(newsTitles, keywords) {
   const lineHeight = config.imageStyle.lineHeight;
   let y = config.imageStyle.textStartY;
   
-  newsTitles.forEach((title, index) => {
-    const text = `${index + 1}. ${title}`;
+  // 检查是否有完整的新闻内容
+  if (global.newsItems && global.newsItems.length > 0) {
+    console.log('✅ 使用完整新闻内容生成图片');
     
-    // 检查文字是否超出区域宽度
-    const textWidth = ctx.measureText(text).width;
-    if (textWidth > textAreaWidth) {
-      // 如果文字太长，进行换行处理
-      const words = text.split('');
+    global.newsItems.forEach((newsItem, index) => {
+      // 绘制新闻标题
+      const titleText = `${index + 1}. ${newsItem.title}`;
+      ctx.font = `bold ${config.imageStyle.fontSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+      ctx.fillStyle = config.imageStyle.textColor;
+      
+      // 处理标题换行
+      const titleWidth = ctx.measureText(titleText).width;
+      if (titleWidth > textAreaWidth) {
+        const words = titleText.split('');
+        let currentLine = '';
+        let lineY = y;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = currentLine + words[i];
+          const testWidth = ctx.measureText(testLine).width;
+          
+          if (testWidth > textAreaWidth && currentLine.length > 0) {
+            ctx.fillText(currentLine, config.imageStyle.textLeftPadding, lineY);
+            currentLine = words[i];
+            lineY += lineHeight;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        
+        if (currentLine.length > 0) {
+          ctx.fillText(currentLine, config.imageStyle.textLeftPadding, lineY);
+          lineY += lineHeight;
+        }
+        
+        y = lineY + 5; // 标题和内容之间的间距
+      } else {
+        ctx.fillText(titleText, config.imageStyle.textLeftPadding, y);
+        y += lineHeight + 5; // 标题和内容之间的间距
+      }
+      
+      // 绘制新闻内容（限制长度，避免图片过长）
+      const content = newsItem.content;
+      const maxContentLength = 150; // 限制内容长度
+      const displayContent = content.length > maxContentLength 
+        ? content.substring(0, maxContentLength) + '...' 
+        : content;
+      
+      ctx.font = `${config.imageStyle.fontSize - 1}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+      ctx.fillStyle = '#888888'; // 内容使用稍浅的颜色
+      
+      // 处理内容换行
+      const words = displayContent.split('');
       let currentLine = '';
       let lineY = y;
       
@@ -634,25 +680,61 @@ async function generateImage(newsTitles, keywords) {
         const testWidth = ctx.measureText(testLine).width;
         
         if (testWidth > textAreaWidth && currentLine.length > 0) {
-          ctx.fillText(currentLine, config.imageStyle.textLeftPadding, lineY);
+          ctx.fillText(currentLine, config.imageStyle.textLeftPadding + 20, lineY); // 内容缩进
           currentLine = words[i];
-          lineY += lineHeight;
+          lineY += lineHeight - 2; // 内容行间距稍小
         } else {
           currentLine = testLine;
         }
       }
       
       if (currentLine.length > 0) {
-        ctx.fillText(currentLine, config.imageStyle.textLeftPadding, lineY);
-        lineY += lineHeight;
+        ctx.fillText(currentLine, config.imageStyle.textLeftPadding + 20, lineY);
+        lineY += lineHeight - 2;
       }
       
-      y = lineY + 10; // 额外间距
-    } else {
-      ctx.fillText(text, config.imageStyle.textLeftPadding, y);
-      y += lineHeight;
-    }
-  });
+      y = lineY + 15; // 新闻之间的间距
+    });
+  } else {
+    // 兼容旧格式：只显示标题
+    console.log('⚠️ 使用标题格式生成图片');
+    
+    newsTitles.forEach((title, index) => {
+      const text = `${index + 1}. ${title}`;
+      
+      // 检查文字是否超出区域宽度
+      const textWidth = ctx.measureText(text).width;
+      if (textWidth > textAreaWidth) {
+        // 如果文字太长，进行换行处理
+        const words = text.split('');
+        let currentLine = '';
+        let lineY = y;
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = currentLine + words[i];
+          const testWidth = ctx.measureText(testLine).width;
+          
+          if (testWidth > textAreaWidth && currentLine.length > 0) {
+            ctx.fillText(currentLine, config.imageStyle.textLeftPadding, lineY);
+            currentLine = words[i];
+            lineY += lineHeight;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        
+        if (currentLine.length > 0) {
+          ctx.fillText(currentLine, config.imageStyle.textLeftPadding, lineY);
+          lineY += lineHeight;
+        }
+        
+        y = lineY + 10; // 额外间距
+      } else {
+        ctx.fillText(text, config.imageStyle.textLeftPadding, y);
+        y += lineHeight;
+      }
+    });
+  }
   
   // 绘制自定义内容（如果有）
   console.log('检查自定义内容:', global.customContent);
