@@ -341,6 +341,12 @@ async function getNewsFromOpenAI(keywords) {
           search_recent_days: 2 // 搜索最近2天的内容
         }
       };
+      
+      // 检查是否是search模型，如果是则移除不兼容的参数
+      if (config.openai.model.includes('search')) {
+        // search模型不支持temperature参数
+        delete requestData.temperature;
+      }
     } else if (config.openai.apiUrl.includes('poloai.top')) {
       // poloai.top format - 根据API文档配置
       
