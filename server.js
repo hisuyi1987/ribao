@@ -347,8 +347,31 @@ async function getNewsFromOpenAI(keywords) {
         ...baseRequestData
       };
       
-      // 只有非搜索模型才尝试添加工具
-      if (!isSearchModel) {
+      // 检查是否是Gemini模型
+      if (config.openai.model.includes('gemini')) {
+        // Gemini模型通过PoloAI代理需要特殊格式
+        requestData.tools = [
+          {
+            "function_declarations": [
+              {
+                "name": "search_web",
+                "description": "Search the web for real-time information",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "The search query"
+                    }
+                  },
+                  "required": ["query"]
+                }
+              }
+            ]
+          }
+        ];
+      } else if (!isSearchModel) {
+        // 非Gemini模型的常规配置
         try {
           requestData.tools = [{"type": "web_search"}];
           requestData.tool_choice = "auto";
