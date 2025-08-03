@@ -261,13 +261,15 @@ async function getNewsFromOpenAI(keywords) {
     }
     
     // 构建提示词
-    let prompt = `请搜索今天与以下关键词相关的新闻，返回${config.newsCount}条新闻标题，格式为JSON数组：
+    let prompt = `请搜索最近24小时内（今天和昨天）与以下关键词相关的最新新闻，返回${config.newsCount}条新闻标题，格式为JSON数组：
 关键词：${keywords.join('、')}
 
 要求：
-1. 只返回新闻标题
-2. 每条标题不超过25字
-3. 返回格式：[{"title": "新闻标题1"}, {"title": "新闻标题2"}]`;
+1. 只返回最近24小时内的新闻，优先选择今天发布的新闻
+2. 确保新闻的时效性和真实性，不要返回过时的旧闻
+3. 每条标题不超过25字
+4. 如果某个关键词在最近24小时内没有相关新闻，可以跳过该关键词
+5. 返回格式：[{"title": "新闻标题1"}, {"title": "新闻标题2"}]`;
 
     // 如果有自定义搜索提示词，添加到请求中
     if (config.customSearchPrompt && config.customSearchPrompt.trim()) {
