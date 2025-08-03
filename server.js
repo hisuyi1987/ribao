@@ -265,12 +265,12 @@ async function getNewsFromOpenAI(keywords) {
     let today = new Date().toISOString().split('T')[0];
     let yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     
-    let prompt = `请搜索最近24小时内（今天和昨天）与以下关键词相关的最新新闻：
+    let prompt = `请搜索最近24小时内（${today}和${yesterday}这两天）与以下关键词相关的最新新闻：
 
 关键词：${keywords.join('、')}
 
 要求：
-1. 搜索真实、具体的新闻内容，不要编造
+1. 必须搜索最新、最近发布的新闻（24小时内），绝对不要使用旧新闻
 2. 从每条新闻的完整内容中提取关键信息
 3. 为每条新闻生成25字以下的精简标题
 4. 标题要包含具体的事件、数据或观点，有实质性内容
@@ -287,11 +287,12 @@ async function getNewsFromOpenAI(keywords) {
 [日期][来源]精简标题（25字以下）
 
 示例格式：
-[2025-08-03][新华网]中国新能源汽车7月出口15.6万辆创新高
-[2025-08-02][人民网]全国多地启动高温预警，最高温达40℃
-[2025-08-03][澎湃新闻]央行发布新规，支持小微企业融资
+[${today}][新华网]中国新能源汽车7月出口15.6万辆创新高
+[${today}][人民网]全国多地启动高温预警，最高温达40℃
+[${today}][澎湃新闻]央行发布新规，支持小微企业融资
 
 重要提醒：
+- 必须使用今天(${today})或昨天(${yesterday})的日期
 - 必须包含来源网站名称
 - 标题要有具体数据或事件，不要泛泛而谈
 - 不要输出"国际合作新进展"这种空洞的标题
@@ -387,18 +388,31 @@ async function getNewsFromOpenAI(keywords) {
         requestData.tools = [{"type": "web_search"}];
       }
     } else if (config.openai.apiUrl.includes('gemini') || config.openai.apiUrl.includes('google')) {
-      // Google Gemini API
+      // Google Gemini API - 根据官方文档配置
       requestData = {
         ...baseRequestData
       };
       
-      if (!isSearchModel) {
-        requestData.tools = [{"type": "web_search"}];
-        requestData.tool_config = {
-          web_search: {
-            recency_days: 2
+      // 根据Gemini官方文档配置google_search工具
+      requestData.tools = [
+        {
+          "type": "google_search"
+        }
+      ];
+      
+      // 对于Gemini 1.5模型，使用兼容的配置
+      if (config.openai.model.includes('1.5')) {
+        requestData.tools = [
+          {
+            "type": "google_search_retrieval",
+            "google_search_retrieval": {
+              "dynamic_retrieval_config": {
+                "mode": "MODE_DYNAMIC",
+                "dynamic_threshold": 0.7
+              }
+            }
           }
-        };
+        ];
       }
     } else if (config.openai.apiUrl.includes('moonshot') || config.openai.apiUrl.includes('platform.moonshot.cn')) {
       // Moonshot API - 使用基础请求，联网搜索功能由模型本身提供
