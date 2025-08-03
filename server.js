@@ -297,57 +297,93 @@ async function getNewsFromOpenAI(keywords) {
     };
     let apiUrl = config.openai.apiUrl; // 默认使用配置的URL
     
+    // 基础请求数据，适用于所有API提供商
+    const baseRequestData = {
+      model: config.openai.model,
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    };
+    
     if (config.openai.apiUrl.includes('aihubmix.com')) {
       // aihubmix.com format
       requestData = {
-        model: config.openai.model,
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 1000,
+        ...baseRequestData,
         web_search_options: {
           enable: true, // 明确启用联网搜索
           search_recent_days: 2 // 搜索最近2天的内容
         }
       };
-      headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
     } else if (config.openai.apiUrl.includes('poloai.top')) {
       // poloai.top format
       requestData = {
-        model: config.openai.model,
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.7,
+        ...baseRequestData,
         tools: [{"type": "web_search"}], // 启用联网搜索
         tool_choice: "auto"
       };
-      headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
-    } else {
-      // Standard OpenAI format
+    } else if (config.openai.apiUrl.includes('api.openai.com')) {
+      // 标准OpenAI API
       requestData = {
-        model: config.openai.model,
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.7,
+        ...baseRequestData,
         stream: false,
         tools: [{"type": "retrieval"}], // 启用知识检索
         tool_choice: "auto"
       };
-      headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
+    } else if (config.openai.apiUrl.includes('dashscope') || config.openai.apiUrl.includes('qianwen')) {
+      // 通义千问API
+      requestData = {
+        ...baseRequestData,
+        parameters: {
+          enable_search: true
+        }
+      };
+    } else if (config.openai.apiUrl.includes('claude') || config.openai.apiUrl.includes('anthropic')) {
+      // Claude/Anthropic API
+      requestData = {
+        ...baseRequestData,
+        system: "Please use your web search capability to find the most recent news.",
+        tools: [{"type": "web_search"}]
+      };
+    } else if (config.openai.apiUrl.includes('gemini') || config.openai.apiUrl.includes('google')) {
+      // Google Gemini API
+      requestData = {
+        ...baseRequestData,
+        tools: [{"type": "web_search"}],
+        tool_config: {
+          web_search: {
+            recency_days: 2
+          }
+        }
+      };
+    } else {
+      // 通用格式，尝试添加多种联网搜索参数
+      requestData = {
+        ...baseRequestData,
+        stream: false,
+        // 尝试各种可能的联网搜索参数
+        web_search: true,
+        tools: [
+          {"type": "web_search"},
+          {"type": "retrieval"}
+        ],
+        tool_choice: "auto",
+        web_search_options: {
+          enable: true,
+          search_recent_days: 2
+        },
+        parameters: {
+          enable_search: true
+        }
+      };
     }
+    
+    // 添加授权头
+    headers['Authorization'] = `Bearer ${config.openai.apiKey}`;
     
     const response = await axios.post(apiUrl || config.openai.apiUrl, requestData, { headers });
 
