@@ -88,6 +88,7 @@ const defaultConfig = {
     textStartY: 150, // 正文起始Y坐标
     lineHeight: 35, // 行高
     textLeftPadding: 30, // 左侧内边距
+    textRightPadding: 30, // 右侧内边距
     
     // 自定义内容设置
     customContentFontSize: 16,
@@ -525,8 +526,8 @@ async function generateImage(newsTitles, keywords) {
   ctx.fillStyle = config.imageStyle.textColor;
   ctx.textAlign = 'left';
   
-  // 计算文字区域宽度，为插图预留空间
-  const textAreaWidth = canvas.width - 200; // 右侧预留200px给插图
+  // 计算文字区域宽度，使用左右内边距
+  const textAreaWidth = canvas.width - config.imageStyle.textLeftPadding - config.imageStyle.textRightPadding;
   const lineHeight = config.imageStyle.lineHeight;
   let y = config.imageStyle.textStartY;
   
@@ -1050,6 +1051,10 @@ app.get('/admin', requireAuth, (req, res) => {
             <label>左侧内边距 (px)</label>
             <input type="number" id="textLeftPadding" placeholder="30" min="10" max="100">
           </div>
+          <div class="form-col">
+            <label>右侧内边距 (px)</label>
+            <input type="number" id="textRightPadding" placeholder="30" min="10" max="100">
+          </div>
         </div>
 
         <!-- 自定义内容设置 -->
@@ -1199,6 +1204,7 @@ app.get('/admin', requireAuth, (req, res) => {
           document.getElementById('lineHeight').value = config.imageStyle.lineHeight || 35;
           document.getElementById('textStartY').value = config.imageStyle.textStartY || 150;
           document.getElementById('textLeftPadding').value = config.imageStyle.textLeftPadding || 30;
+          document.getElementById('textRightPadding').value = config.imageStyle.textRightPadding || 30;
           
           document.getElementById('customContentFontSize').value = config.imageStyle.customContentFontSize || 16;
           document.getElementById('customContentColor').value = config.imageStyle.customContentColor || '#ff6b35';
@@ -1286,6 +1292,7 @@ app.get('/admin', requireAuth, (req, res) => {
           lineHeight: parseInt(document.getElementById('lineHeight').value) || 35,
           textStartY: parseInt(document.getElementById('textStartY').value) || 150,
           textLeftPadding: parseInt(document.getElementById('textLeftPadding').value) || 30,
+          textRightPadding: parseInt(document.getElementById('textRightPadding').value) || 30,
           
           customContentFontSize: parseInt(document.getElementById('customContentFontSize').value) || 16,
           customContentColor: document.getElementById('customContentColor').value || '#ff6b35',
