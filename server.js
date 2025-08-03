@@ -265,19 +265,21 @@ async function getNewsFromOpenAI(keywords) {
     let today = new Date().toISOString().split('T')[0];
     let yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     
-    let prompt = `请搜索${today}（今天）和${yesterday}（昨天）这两天内与以下关键词相关的最新新闻，返回${config.newsCount}条新闻标题，格式为JSON数组：
+    let prompt = `请从以下可靠的新闻网站搜索${today}（今天）和${yesterday}（昨天）这两天内与以下关键词相关的最新新闻，返回${config.newsCount}条新闻标题，格式为JSON数组：
+
+新闻来源网站：人民网、新华网、澎湃新闻、界面新闻、36氪、财新网、中国日报网
 关键词：${keywords.join('、')}
 
 要求：
 1. 严格限制只返回今天和昨天（${today}和${yesterday}）的新闻
-2. 每条新闻必须标注发布日期，格式为：[日期]标题
-3. 绝对不要返回更早的旧新闻
+2. 每条新闻必须标注发布日期和来源网站，格式为：[日期][来源]标题
+3. 绝对不要返回更早的旧新闻，也不要编造不存在的新闻
 4. 每条标题不超过25字，但必须包含具体事件、数据或观点等实质内容
 5. 确保内容多样性，每个关键词至少有2-3条不同主题的新闻
 6. 避免重复内容，即使表述不同也不要包含相同事件的新闻
 7. 标题应该是完整的新闻标题，不要只是话题或概念
 8. 如果某个关键词在最近两天内没有相关新闻，可以跳过该关键词
-9. 返回格式：[{"title": "[${today}]新闻标题1"}, {"title": "[${yesterday}]新闻标题2"}]`;
+9. 返回格式：[{"title": "[${today}][人民网]新闻标题1"}, {"title": "[${yesterday}][新华网]新闻标题2"}]`;
 
     // 如果有自定义搜索提示词，添加到请求中
     if (config.customSearchPrompt && config.customSearchPrompt.trim()) {
