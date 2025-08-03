@@ -265,7 +265,7 @@ async function getNewsFromOpenAI(keywords) {
     let today = new Date().toISOString().split('T')[0];
     let yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     
-    const prompt = `请搜索最近24小时内（今天和昨天）与以下关键词相关的最新新闻：
+    let prompt = `请搜索最近24小时内（今天和昨天）与以下关键词相关的最新新闻：
 
 关键词：${keywords.join('、')}
 
