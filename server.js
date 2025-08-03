@@ -273,8 +273,10 @@ async function getNewsFromOpenAI(keywords) {
 2. 每条新闻必须标注发布日期，格式为：[日期]标题
 3. 绝对不要返回更早的旧新闻
 4. 每条标题不超过25字
-5. 如果某个关键词在最近两天内没有相关新闻，可以跳过该关键词
-6. 返回格式：[{"title": "[${today}]新闻标题1"}, {"title": "[${yesterday}]新闻标题2"}]`;
+5. 确保内容多样性，不同关键词的新闻应该有明显不同的内容
+6. 避免重复内容，即使表述不同也不要包含相同事件的新闻
+7. 如果某个关键词在最近两天内没有相关新闻，可以跳过该关键词
+8. 返回格式：[{"title": "[${today}]新闻标题1"}, {"title": "[${yesterday}]新闻标题2"}]`;
 
     // 如果有自定义搜索提示词，添加到请求中
     if (config.customSearchPrompt && config.customSearchPrompt.trim()) {
