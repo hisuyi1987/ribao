@@ -44,9 +44,9 @@ const IMAGE_PATH = 'public/news-latest.png';
 // 默认配置
 const defaultConfig = {
   openai: {
-    apiUrl: '', // 请填写API地址，如：https://api.openai.com/v1/chat/completions
+    apiUrl: '', // 请填写API地址，如：https://api.openai.com/v1/chat/completions 或 https://api.moonshot.cn/v1/chat/completions
     apiKey: '', // 请填写API密钥
-    model: 'gpt-4o-mini' // 请填写模型名称，如：gpt-3.5-turbo、gpt-4、claude-3等
+    model: 'gpt-4o-mini' // 请填写模型名称，如：gpt-3.5-turbo、gpt-4、moonshot-v1-8k等
   },
   keywords: [], // 请填写关键词，如：['科技', 'ai', '社会', '财经']
   useMockData: false,
@@ -390,18 +390,8 @@ async function getNewsFromOpenAI(keywords) {
         ...baseRequestData
       };
       
-      if (!isSearchModel) {
-        // 根据Moonshot文档，需要添加tools配置
-        requestData.tools = [
-          {
-            type: "web_search",
-            web_search: {
-              enable: true
-            }
-          }
-        ];
-        requestData.tool_choice = "auto";
-      }
+      // Moonshot目前不支持web_search工具，直接使用基础请求
+      // 联网搜索功能由模型本身提供，不需要额外工具配置
     } else {
       // 通用格式，根据模型类型决定是否添加联网搜索参数
       requestData = {
