@@ -384,6 +384,24 @@ async function getNewsFromOpenAI(keywords) {
           }
         };
       }
+    } else if (config.openai.apiUrl.includes('moonshot') || config.openai.apiUrl.includes('platform.moonshot.cn')) {
+      // Moonshot API - 根据官方文档配置
+      requestData = {
+        ...baseRequestData
+      };
+      
+      if (!isSearchModel) {
+        // 根据Moonshot文档，需要添加tools配置
+        requestData.tools = [
+          {
+            type: "web_search",
+            web_search: {
+              enable: true
+            }
+          }
+        ];
+        requestData.tool_choice = "auto";
+      }
     } else {
       // 通用格式，根据模型类型决定是否添加联网搜索参数
       requestData = {
