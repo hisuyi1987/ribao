@@ -401,23 +401,13 @@ async function getNewsFromOpenAI(keywords) {
         };
       }
     } else if (config.openai.apiUrl.includes('moonshot') || config.openai.apiUrl.includes('platform.moonshot.cn')) {
-      // Moonshot API - 根据官方文档配置
+      // Moonshot API - 使用基础请求，联网搜索功能由模型本身提供
       requestData = {
         ...baseRequestData
       };
       
-      // 根据Moonshot官方文档，需要添加tools配置来启用联网搜索
-      if (!isSearchModel) {
-        requestData.tools = [
-          {
-            type: "web_search",
-            web_search: {
-              enable: true
-            }
-          }
-        ];
-        requestData.tool_choice = "auto";
-      }
+      // Moonshot的联网搜索功能是内置的，不需要额外工具配置
+      // 根据错误信息，Moonshot只支持function和plugin工具类型
     } else {
       // 通用格式，根据模型类型决定是否添加联网搜索参数
       requestData = {
